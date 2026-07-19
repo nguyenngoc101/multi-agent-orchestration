@@ -30,3 +30,7 @@ check-registry:
 # In wave song song hiện tại (tiện xem nhanh)
 waves:
     python3 scripts/check-registry.py task-registry.json
+
+# Dispatcher bán tự động (dry-run): PR merged → đề xuất chuyển state + in wave kế
+orchestrate:
+    python3 scripts/orchestrate.py task-registry.json

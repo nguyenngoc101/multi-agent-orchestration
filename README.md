@@ -36,6 +36,8 @@ scripts/
   cleanup-task.sh              Dọn sau merge
   check-registry.py            Validate registry + tính wave song song
   enforce-scope.py             Chặn PR đổi file ngoài scope (dùng trong CI)
+  orchestrate.py               Dispatcher bán tự động: PR merged → chuyển state + wave kế
+  setup-branch-protection.sh   Áp branch protection phía server qua gh api (dry-run mặc định)
 
 .githooks/
   pre-commit / pre-push        Chặn cục bộ commit/push vào nhánh cấm
