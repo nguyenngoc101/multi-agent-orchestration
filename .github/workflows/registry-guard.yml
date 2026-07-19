@@ -22,10 +22,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: candidate
-      # Never execute validator code supplied by the candidate change.
+      # Never execute validator code supplied by the candidate change. On a PR, trust
+      # the immutable base SHA (same as enforce-scope) so develop advancing mid-PR can't
+      # change the arbiter; on non-PR triggers (merge_group/push), fall back to develop.
       - uses: actions/checkout@v4
         with:
-          ref: develop
+          ref: ${{ github.event.pull_request.base.sha || 'develop' }}
           path: trusted
       - name: Check candidate registry with trusted validator
         run: python3 trusted/scripts/check-registry.py candidate/task-registry.json
