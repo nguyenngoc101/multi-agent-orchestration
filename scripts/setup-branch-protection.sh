@@ -45,8 +45,11 @@ run() {
 # ── main / develop: classic branch protection (concrete branches) ────────────
 protect_branch() {
   local branch="$1" approvals="$2"
-  local reviews="null"
-  [[ "$approvals" -gt 0 ]] && reviews="{\"required_approving_review_count\":$approvals}"
+  # Always send the reviews object (even count 0) so "Require a pull request before
+  # merging" is ON. Sending null turns the PR requirement OFF — then direct pushes to
+  # the branch are allowed, defeating the point. develop -> count 0 (PR required, no
+  # approval); main -> count 1 (PR + 1 human approval).
+  local reviews="{\"required_approving_review_count\":$approvals}"
   run PUT "repos/$REPO/branches/$branch/protection" "$(cat <<JSON
 {
   "required_status_checks": { "strict": true, "contexts": [ $CHECKS ] },
