@@ -1,53 +1,53 @@
-# Worker runtimes — trigger Codex vs Claude cho đúng
+# Worker runtimes — triggering Codex vs Claude correctly
 
-Ánh xạ `agents[].kind` → cách orchestrator *thực sự* spawn worker. Rút ra từ chạy thật;
-đọc kèm mục "Định tuyến worker" trong `orchestrator/prompts/ORCHESTRATOR.md`.
+Maps `agents[].kind` → how the orchestrator *actually* spawns a worker. Learned from a
+live run; read alongside "Worker routing" in `orchestrator/prompts/ORCHESTRATOR.md`.
 
-## Nguyên tắc: Codex mặc định, Claude ngoại lệ
+## Principle: Codex by default, Claude as the exception
 
-- **Codex (unlimited)** = động cơ throughput → worker mặc định cho task thường.
-- **Claude (Pro, khan)** = orchestrator + reviewer + task nhạy cảm/khó → `claude-lead`.
+- **Codex (unlimited)** = the throughput engine → default worker for ordinary tasks.
+- **Claude (Pro, scarce)** = orchestrator + reviewer + sensitive/hard tasks → `claude-lead`.
 
-## kind = "codex" — spawn qua plugin, worktree tạo sẵn
+## kind = "codex" — spawn via the plugin, worktree pre-created
 
 ```
-1. Tạo TRƯỚC worktree đúng nhánh feature/*:
-     ./scripts/new-task.sh <task-id>          # → ../wt/<id> trên feature/<id>
-2. Spawn Codex worker trỏ vào worktree đó:
-     Agent(subagent_type="codex:codex-rescue", prompt=<INPUT JSON + đường dẫn worktree>)
-3. Codex code + test trong scope, commit, (submit-task → PR).
+1. Create the correct feature/* worktree FIRST:
+     ./scripts/new-task.sh <task-id>          # → ../wt/<id> on feature/<id>
+2. Spawn the Codex worker pointed at that worktree:
+     Agent(subagent_type="codex:codex-rescue", prompt=<INPUT JSON + worktree path>)
+3. Codex codes + tests within scope, commits, (submit-task → PR).
 ```
 
-**Hai gotcha bắt buộc biết (đã gặp khi chạy thật):**
+**Two gotchas you MUST know (hit in a live run):**
 
-1. **KHÔNG dùng `isolation:"worktree"` của harness cho Codex.** Worktree đó bị
-   **auto-clean khi lần chạy đầu không có thay đổi** → resume mất chỗ làm. Ngoài ra
-   tên nhánh của nó không phải `feature/*` nên worker tuân AGENTS.md sẽ tự chặn.
-   → Luôn tạo worktree `feature/<id>` bằng `new-task.sh` và trỏ Codex vào.
+1. **Do NOT use the harness `isolation:"worktree"` for Codex.** That worktree is
+   **auto-cleaned when the first run makes no changes** → a resume loses its workspace.
+   Its branch name is also not `feature/*`, so a worker obeying AGENTS.md blocks itself.
+   → Always create the `feature/<id>` worktree with `new-task.sh` and point Codex at it.
 
-2. **Sandbox Codex có thể chặn `git commit`** (không tạo được `index.lock`). Khi đó
-   Codex viết code/test xong nhưng không tự commit → không hoàn tất `submit-task.sh`.
-   → Chạy Codex ở chế độ ghi được (vd `--sandbox workspace-write` / nới approval cho
-   thao tác git), HOẶC orchestrator commit hộ rồi mới để worker/CI tiếp.
+2. **Codex's sandbox may block `git commit`** (can't create `index.lock`). Then Codex
+   writes code/tests fine but can't commit → can't complete `submit-task.sh`.
+   → Run Codex in a write-capable mode (e.g. `--sandbox workspace-write` / loosen approval
+   for git operations), OR have the orchestrator commit on its behalf, then continue.
 
-## kind = "claude" — sub-agent với worktree của harness
+## kind = "claude" — sub-agent with the harness worktree
 
 ```
 Agent(subagent_type="general-purpose", isolation:"worktree", prompt=<INPUT JSON>)
 ```
 
-Ở đây `isolation:"worktree"` OK vì Claude sub-agent làm việc + commit ngay trong lượt,
-worktree có thay đổi nên không bị auto-clean. Dùng cho task escalate (nhạy cảm/kiến
-trúc/Codex fail ≥2 lần).
+Here `isolation:"worktree"` is fine because the Claude sub-agent works + commits within the
+turn, so the worktree has changes and isn't auto-cleaned. Use it for escalated tasks
+(sensitive/architecture/Codex failed ≥2 times).
 
 ## kind = "other"
 
-Không có kênh gọi trực tiếp → orchestrator set `assigned`, in INPUT JSON, DỪNG chờ
-người/agent đó tự lấy việc. "Available" ở đây là niềm tin vào registry, không verify.
+No direct call channel → the orchestrator sets `assigned`, prints the INPUT JSON, and STOPS
+to wait for that human/agent to pick it up. "Available" here is trust in the registry, unverified.
 
-## Kiểm Codex sẵn sàng
+## Check that Codex is ready
 
 ```
-/codex:setup                        # kiểm CLI + auth; ready=true là dùng được
-/codex:setup --enable-review-gate   # (tùy) bắt Claude review bản Codex trước khi dừng
+/codex:setup                        # check the CLI + auth; ready=true means good to go
+/codex:setup --enable-review-gate   # (optional) require Claude to review Codex's work before stopping
 ```

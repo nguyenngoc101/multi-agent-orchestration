@@ -1,14 +1,14 @@
-# WORKER_PROTOCOL.md — Hợp đồng cho MỌI worker (Claude / Codex / khác)
+# WORKER_PROTOCOL.md — Contract for EVERY worker (Claude / Codex / other)
 
-Protocol trung lập với loại agent. Orchestrator giao task theo format INPUT;
-worker trả về theo format OUTPUT. Không dựa vào đặc thù của bất kỳ agent nào.
+An agent-neutral protocol. The orchestrator assigns tasks in the INPUT format; the
+worker returns results in the OUTPUT format. Don't rely on any single agent's specifics.
 
-## INPUT — orchestrator giao cho worker
+## INPUT — orchestrator assigns to a worker
 
 ```json
 {
   "task_id": "T-101",
-  "title": "Thêm endpoint refund cho payment",
+  "title": "Add a refund endpoint for payment",
   "branch": "feature/T-101",
   "base": "origin/develop",
   "scope": {
@@ -16,28 +16,29 @@ worker trả về theo format OUTPUT. Không dựa vào đặc thù của bất 
     "deny":  ["src/shared/**"]
   },
   "acceptance": [
-    "POST /payments/{id}/refund trả 200 và tạo bản ghi refund",
-    "Có test cho case thành công và case số tiền vượt quá"
+    "POST /payments/{id}/refund returns 200 and creates a refund record",
+    "Tests for the success case and the over-amount case"
   ],
   "commands": { "lint": "just lint", "test": "just test", "build": "just build" }
 }
 ```
 
-## Ràng buộc worker PHẢI tuân (bất kể loại agent)
+## Constraints a worker MUST follow (regardless of agent type)
 
-1. CHỈ sửa file khớp `scope.allow`, KHÔNG đụng `scope.deny` hay file ngoài allow.
-   Cần đụng ngoài scope → DỪNG, trả OUTPUT với `status=blocked` + lý do. Không tự nới.
-2. Làm trong worktree của `branch` đã cấp. Không checkout nhánh khác.
-3. Trước khi báo xong: rebase lên `base`, chạy `commands.lint/test/build`, phải xanh.
-4. Không `git stash`, không force-push, không đụng main/develop/release/hotfix.
-5. Commit nhỏ, message rõ, tham chiếu `task_id`.
-6. Context nằm ở ARTIFACT, không ở trí nhớ: nếu bị giao lại, đọc `task.log`, branch
-   của bạn, và comment PR để tái dựng — đừng giả định nhớ phiên trước.
-7. Quyết định xuyên suốt (interface chung, quy ước) → ĐỌC `docs/decisions/` trước
-   và tuân ADR đang Accepted. Cần một quyết định chung MỚI → DỪNG, đề xuất ADR
-   (status=blocked, nêu ở `notes`); KHÔNG tự chốt trong feature branch.
+1. ONLY change files matching `scope.allow`, NEVER touch `scope.deny` or files outside
+   allow. Need to touch outside scope → STOP, return OUTPUT with `status=blocked` + reason.
+   Don't widen it yourself.
+2. Work in the worktree of the assigned `branch`. Don't check out another branch.
+3. Before reporting done: rebase onto `base`, run `commands.lint/test/build`, all green.
+4. No `git stash`, no force-push, don't touch main/develop/release/hotfix.
+5. Small commits, clear messages, referencing `task_id`.
+6. Context lives in ARTIFACTS, not memory: if reassigned, read `task.log`, your branch,
+   and PR comments to reconstruct — don't assume you remember the previous session.
+7. Cross-cutting decisions (shared interfaces, conventions) → READ `docs/decisions/` first
+   and follow the Accepted ADRs. Need a NEW shared decision → STOP, propose an ADR
+   (status=blocked, state it in `notes`); do NOT settle it yourself in a feature branch.
 
-## OUTPUT — worker trả về orchestrator
+## OUTPUT — worker returns to the orchestrator
 
 ```json
 {
@@ -47,19 +48,20 @@ worker trả về theo format OUTPUT. Không dựa vào đặc thù của bất 
   "pr": "https://github.com/org/repo/pull/210",
   "files_changed": ["src/payment/refund.*", "test/payment/refund.*"],
   "checks": { "lint": "pass", "test": "pass", "build": "pass" },
-  "notes": "Ghi chú cho reviewer; hoặc lý do nếu blocked/failed",
-  "out_of_scope_needed": []   // liệt kê file ngoài scope nếu bị chặn
+  "notes": "Notes for the reviewer; or the reason if blocked/failed",
+  "out_of_scope_needed": []   // list files outside scope if blocked
 }
 ```
 
-## Quy tắc trạng thái
+## State rules
 
-- `pr_open`  → orchestrator chuyển task sang `in_review`, chờ CI + review.
-- `blocked`  → orchestrator đọc `out_of_scope_needed` / `notes`, báo người chia lại.
-- `failed`   → orchestrator có thể giao lại (cùng worker để giữ context, hoặc worker
-  idle khác nếu task độc lập).
+- `pr_open`  → orchestrator moves the task to `in_review`, waits for CI + review.
+- `blocked`  → orchestrator reads `out_of_scope_needed` / `notes`, asks a human to re-split.
+- `failed`   → orchestrator may reassign (same worker to keep context, or another idle
+  worker if the task is independent).
 
-## Sau review
+## After review
 
-Nếu reviewer/CI yêu cầu sửa: orchestrator gửi lại cùng INPUT + mảng `feedback`
-(danh sách điểm cần sửa). Worker sửa TRONG branch cũ, push lại, trả OUTPUT mới.
+If the reviewer/CI asks for changes: the orchestrator re-sends the same INPUT + a
+`feedback` array (list of points to fix). The worker fixes it IN the same branch,
+pushes again, and returns a new OUTPUT.

@@ -1,69 +1,74 @@
-# Branch protection — lớp chặn KHÔNG-THỂ-LÁCH
+# Branch protection — the UN-BYPASSABLE gate
 
-Hook cục bộ (`.githooks/`) là lớp phòng thủ đầu, nhưng agent (hoặc người) có thể
-bỏ qua bằng `--no-verify`. Lớp thật sự cưỡng chế nằm ở SERVER. Cấu hình một lần.
+Local hooks (`.githooks/`) are the first defense layer, but an agent (or human) can skip
+them with `--no-verify`. The real enforcement lives on the SERVER. Configure it once.
 
-## Nguyên tắc
+## Principles
 
-| Nhánh | Push thẳng | Bắt buộc PR | Bắt buộc CI xanh | Bắt buộc review | Ai được merge |
+| Branch | Direct push | Require PR | Require CI green | Require review | Who may merge |
 |---|---|---|---|---|---|
-| `main` | ❌ | ✓ | ✓ | ✓ (người) | Chỉ người/release manager |
-| `release/*` | ❌ | ✓ | ✓ | ✓ (người) | Chỉ người |
-| `develop` | ❌ | ✓ | ✓ | ✓ hoặc auto | Agent qua PR, sau khi CI xanh |
-| `hotfix/*` | ❌ | ✓ | ✓ | ✓ (người) | Chỉ người |
-| `feature/*` | ✓ (agent) | — | — | — | (branch riêng agent) |
+| `main` | ❌ | ✓ | ✓ | ✓ (human) | Human / release manager only |
+| `release/*` | ❌ | ✓ | ✓ | ✓ (human) | Human only |
+| `develop` | ❌ | ✓ | ✓ | ✓ or auto | Agent via PR, after CI green |
+| `hotfix/*` | ❌ | ✓ | ✓ | ✓ (human) | Human only |
+| `feature/*` | ✓ (agent) | — | — | — | (agent's own branch) |
 
-Điểm cốt lõi: agent CHỈ có quyền tạo/push `feature/*` và mở PR vào `develop`.
-Mọi nhánh còn lại server từ chối — kể cả khi agent cố `--no-verify`.
+Core point: agents are ONLY allowed to create/push `feature/*` and open PRs into
+`develop`. The server rejects every other branch — even if the agent tries `--no-verify`.
 
-## GitHub — Rulesets (khuyến nghị) hoặc Branch protection
+## GitHub — Rulesets (recommended) or Branch protection
 
-Với mỗi target (`main`, `develop`, `release/*`, `hotfix/*`):
-- Require a pull request before merging (bật; với main/release yêu cầu ≥1 approval)
-- Require status checks to pass → chọn các check CI (lint/test/build)
+For each target (`main`, `develop`, `release/*`, `hotfix/*`):
+- Require a pull request before merging (on; require ≥1 approval for main/release)
+- Require status checks to pass → select the CI checks (lint/test/build)
 - Require branches to be up to date before merging
 - Block force pushes
-- Restrict who can push → chỉ team người (loại tài khoản agent) cho main/release/hotfix
-- (main/release) Require review from Code Owners nếu dùng CODEOWNERS
-- Bật merge queue cho `develop`; required workflows phải lắng nghe `merge_group`
+- Restrict who can push → the human team only (exclude agent accounts) for main/release/hotfix
+- (main/release) Require review from Code Owners if using CODEOWNERS
+- Enable the merge queue for `develop`; required workflows must listen for `merge_group`
 
-Phân quyền agent: tạo một machine account / token cho agent, chỉ cấp quyền đủ để
-push `feature/*` và tạo PR. KHÔNG cho quyền admin/bypass.
+Agent permissions: create a machine account / token for agents, granting only enough to
+push `feature/*` and create PRs. Do NOT grant admin/bypass.
 
-Thay owner mẫu trong `.github/CODEOWNERS` bằng team/user thật. Registry control-plane
-phải qua PR được CODEOWNER duyệt trước khi feature branch tương ứng được tạo.
+Replace the sample owner in `.github/CODEOWNERS` with a real team/user. The registry
+control-plane must go through a CODEOWNER-approved PR before the corresponding feature
+branch is created.
+
+> Shortcut: `./scripts/setup-branch-protection.sh` applies most of this via `gh api`
+> (dry-run by default; `--apply` to apply). Team push-restriction and the merge queue
+> still need the UI.
 
 ## GitLab — Protected branches + Push rules
 
 - Settings → Repository → Protected branches:
-  - `main`, `release/*`, `hotfix/*`: Allowed to push = No one; Allowed to merge = Maintainers (người)
-  - `develop`: Allowed to push = No one; Allowed to merge = Developers+ (qua MR)
-- Settings → Merge requests: bật "Pipelines must succeed" và "All discussions resolved"
-- Push Rules: bật "Do not allow users to remove tags", chặn force push
-- Wildcard `feature/*`: để mặc định (agent push được)
+  - `main`, `release/*`, `hotfix/*`: Allowed to push = No one; Allowed to merge = Maintainers (human)
+  - `develop`: Allowed to push = No one; Allowed to merge = Developers+ (via MR)
+- Settings → Merge requests: enable "Pipelines must succeed" and "All discussions resolved"
+- Push Rules: enable "Do not allow users to remove tags", block force push
+- Wildcard `feature/*`: leave default (agents can push)
 
-## Bitbucket / khác
+## Bitbucket / others
 
-Nguyên tắc như nhau: main/release/hotfix = merge-only qua PR, CI bắt buộc, chặn
-force push, giới hạn người merge. Áp cùng ma trận quyền ở bảng trên.
+Same principles: main/release/hotfix = merge-only via PR, CI required, block force push,
+limit who can merge. Apply the same permission matrix as the table above.
 
-## CI gate (mô tả, không gắn tool)
+## CI gate (described, tool-agnostic)
 
-PR vào `develop` (và vào `main`/`release`) phải chạy 3 job và xanh mới merge được:
+A PR into `develop` (and into `main`/`release`) must run 3 jobs, all green before merge:
 
-1. `lint`  — gọi `just lint`  (hoặc `make lint`)
-2. `test`  — gọi `just test`  (hoặc `make test`)
-3. `build` — gọi `just build` (hoặc `make build`)
+1. `lint`  — calls `just lint`  (or `make lint`)
+2. `test`  — calls `just test`  (or `make test`)
+3. `build` — calls `just build` (or `make build`)
 
-Pipeline CHỈ gọi các task này, không tự viết lệnh stack — nhờ đó cấu hình CI
-giống nhau bất kể repo dùng ngôn ngữ gì; đổi stack chỉ cần sửa `justfile`.
+The pipeline ONLY calls these tasks, never writes stack commands itself — so the CI config
+is identical regardless of the repo's language; switching stacks means editing `justfile`.
 
-## Deploy gate (4 môi trường)
+## Deploy gate (4 environments)
 
-- Dev  : auto-deploy khi release branch cập nhật.
-- SIT  : auto hoặc 1-click; chạy test tích hợp trên CÙNG artifact.
-- UAT  : deploy để nghiệm thu; cần tester xác nhận.
-- PROD : **manual approval gate** — chỉ người có quyền duyệt (có log ai/khi nào,
-         phục vụ audit). Agent KHÔNG nằm trong luồng này.
+- Dev  : auto-deploy when the release branch updates.
+- SIT  : auto or 1-click; runs integration tests on the SAME artifact.
+- UAT  : deploy for acceptance; requires a tester's sign-off.
+- PROD : **manual approval gate** — only an authorized approver (with a who/when log for
+         audit). Agents are NOT in this flow.
 
-Cùng một artifact được promote qua 4 env; không rebuild giữa các môi trường.
+The same artifact is promoted through all 4 envs; no rebuild between environments.

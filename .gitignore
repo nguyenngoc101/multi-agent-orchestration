@@ -1,4 +1,4 @@
-# Worktree của agent nằm ngoài repo, nhưng phòng khi đặt trong:
+# Agent worktrees live outside the repo, but just in case they're placed inside:
 /wt/
 ../wt/
 *.local

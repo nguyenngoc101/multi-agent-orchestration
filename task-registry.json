@@ -7,41 +7,41 @@
   ],
   "tasks": [
     {
-      "id": "T-101", "title": "Thêm endpoint refund cho payment",
+      "id": "T-101", "title": "Add a refund endpoint for payment",
       "issue": "https://github.com/org/repo/issues/101",
       "scope": { "allow": ["src/payment/**", "test/payment/**"], "deny": ["src/shared/**"] },
       "requires": ["backend"], "depends_on": [], "priority": 1,
       "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null,
       "log": [
-        { "by": "orchestrator", "note": "route mặc định→codex (requires=backend, không nhạy cảm); chờ tới lượt giao" }
+        { "by": "orchestrator", "note": "default route->codex (requires=backend, not sensitive); waiting to be assigned" }
       ]
     },
     {
-      "id": "T-102", "title": "Màn hình lịch sử giao dịch",
+      "id": "T-102", "title": "Transaction history screen",
       "scope": { "allow": ["src/web/history/**"], "deny": [] },
       "requires": ["frontend"], "depends_on": [], "priority": 2,
       "state": "in_progress", "assignee": "codex-1", "branch": "feature/T-102", "pr": null, "blocked_reason": null,
       "log": [
-        { "ts": "2026-07-19T09:00:00Z", "by": "orchestrator", "note": "backlog→assigned: route→codex-1 (frontend, idle)" },
-        { "ts": "2026-07-19T09:05:00Z", "by": "codex-1",      "note": "assigned→in_progress; theo ADR-0001 tái dùng component bảng ở src/web/shared (chỉ đọc)" }
+        { "ts": "2026-07-19T09:00:00Z", "by": "orchestrator", "note": "backlog->assigned: route->codex-1 (frontend, idle)" },
+        { "ts": "2026-07-19T09:05:00Z", "by": "codex-1",      "note": "assigned->in_progress; per ADR-0001 reuse the shared table component in src/web/shared (read-only)" }
       ]
     },
     {
-      "id": "T-103", "title": "Migration bảng refund",
+      "id": "T-103", "title": "Refund table migration",
       "scope": { "allow": ["db/migrations/**"], "deny": [] },
       "requires": ["sql"], "depends_on": ["T-101"], "priority": 1,
       "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null,
       "log": [
-        { "by": "orchestrator", "note": "giữ backlog: chờ T-101 merged (schema phụ thuộc); sẽ route→codex-2 (có sql)" }
+        { "by": "orchestrator", "note": "keep backlog: waiting for T-101 merged (schema dependency); will route->codex-2 (has sql)" }
       ]
     },
     {
-      "id": "T-104", "title": "Refactor tiện ích tiền tệ dùng chung",
+      "id": "T-104", "title": "Refactor the shared money utility",
       "scope": { "allow": ["src/shared/money/**"], "deny": [] },
       "requires": ["sensitive"], "depends_on": [], "priority": 2,
       "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null,
       "log": [
-        { "by": "orchestrator", "note": "requires=sensitive → chỉ claude-lead match → escalate sang Claude (đụng module dùng chung)" }
+        { "by": "orchestrator", "note": "requires=sensitive → only claude-lead matches → escalate to Claude (touches a shared module)" }
       ]
     }
   ]

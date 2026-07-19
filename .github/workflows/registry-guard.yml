@@ -1,8 +1,8 @@
 name: registry-guard
 
-# Hai việc:
-#  1. Validate task-registry.json: chu trình, dep thiếu, scope overlap, in wave.
-#  2. Enforce scope: PR feature/<id> chỉ được đổi file trong scope.allow của task đó.
+# Two jobs:
+#  1. Validate task-registry.json: cycles, missing deps, scope overlap, print waves.
+#  2. Enforce scope: a feature/<id> PR may only change files in that task's scope.allow.
 on:
   pull_request:
     branches: [develop]
@@ -31,7 +31,7 @@ jobs:
         run: python3 trusted/scripts/check-registry.py candidate/task-registry.json
 
   enforce-scope:
-    # Chỉ chạy cho PR từ nhánh feature/*
+    # Only runs for PRs from feature/* branches
     if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'feature/')
     runs-on: ubuntu-latest
     steps:
@@ -51,7 +51,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # task id = phần sau 'feature/'
+          # task id = the part after 'feature/'
           TASK_ID="${HEAD_REF#feature/}"
           echo "Task: $TASK_ID"
           cd candidate

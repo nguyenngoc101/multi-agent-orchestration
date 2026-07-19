@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-orchestrate.py — dispatcher BÁN TỰ ĐỘNG cho vòng lặp điều phối.
+orchestrate.py — SEMI-AUTOMATIC dispatcher for the orchestration loop.
 
-Làm phần cơ khí mà orchestrator (LLM/người) hay phải làm tay:
-  1. Hỏi `gh` trạng thái PR của mỗi task đang có branch.
-  2. Task nào PR đã MERGED → đề xuất chuyển `state=merged`, giải phóng agent
-     (status=idle, current_task=null), và APPEND một dòng vào `task.log`.
-  3. In "wave" kế tiếp (task sẵn sàng sau khi dependency đã merged).
+Does the mechanical part the orchestrator (LLM/human) otherwise does by hand:
+  1. Ask `gh` for the PR status of every task that has a branch.
+  2. For any task whose PR is MERGED → propose state=merged, free the agent
+     (status=idle, current_task=null), and append a line to task.log.
+  3. Print the next "wave" (tasks ready once their dependencies are merged).
 
-KHÔNG merge, KHÔNG push, KHÔNG spawn worker — chỉ đọc trạng thái + cập nhật registry.
-Quyết định giao task cho ai (routing theo kind) vẫn do orchestrator (xem ORCHESTRATOR.md).
+Does NOT merge, push, or spawn workers — only reads status + updates the registry.
+Deciding who gets a task (routing by kind) stays with the orchestrator (see ORCHESTRATOR.md).
 
-MẶC ĐỊNH: dry-run (chỉ in đề xuất). Thêm --write để ghi vào registry.
-Chỉ phụ thuộc Python 3 stdlib + gh CLI (tùy chọn: có thể nạp pr-status từ --status-json).
+DEFAULT: dry-run (only prints proposals). Add --write to update the registry.
+Depends only on Python 3 stdlib + the gh CLI (optionally load PR status via --status-json).
 
-Dùng:
-  python3 scripts/orchestrate.py                     # dry-run trên task-registry.json
-  python3 scripts/orchestrate.py --write             # áp thay đổi
+Usage:
+  python3 scripts/orchestrate.py                     # dry-run on task-registry.json
+  python3 scripts/orchestrate.py --write             # apply changes
   python3 scripts/orchestrate.py path.json --write
 """
 import argparse
@@ -27,7 +27,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Tái dùng compute_waves + TERMINAL từ check-registry.py (cùng thư mục).
+# Reuse compute_waves + TERMINAL from check-registry.py (same directory).
 _spec = importlib.util.spec_from_file_location(
     "check_registry", Path(__file__).with_name("check-registry.py"))
 _cr = importlib.util.module_from_spec(_spec)
@@ -41,7 +41,7 @@ def now_iso():
 
 
 def gh_pr_status(branch):
-    """Trả về {'merged': bool, 'state': str} cho branch, hoặc None nếu không có PR/lỗi."""
+    """Return {'merged': bool, 'state': str} for a branch, or None if no PR/error."""
     try:
         out = subprocess.run(
             ["gh", "pr", "view", branch, "--json", "state,mergedAt"],
@@ -56,10 +56,10 @@ def gh_pr_status(branch):
 
 
 def plan(registry, pr_status_by_branch):
-    """PURE: từ registry + trạng thái PR, trả về danh sách transition đề xuất.
+    """PURE: from registry + PR status, return the list of proposed transitions.
 
-    Mỗi transition: {task, from, to, free_agent, note}. Hiện xử lý ca chính:
-    PR đã merged → task 'merged' + giải phóng agent giữ task đó."""
+    Each transition: {task, from, to, free_agent, note}. Currently handles the main
+    case: PR merged → task 'merged' + free the agent holding that task."""
     transitions = []
     for task in registry.get("tasks", []):
         branch = task.get("branch")
@@ -73,13 +73,13 @@ def plan(registry, pr_status_by_branch):
                 "from": state,
                 "to": "merged",
                 "free_agent": task.get("assignee"),
-                "note": f"{state}→merged: PR {branch} đã merged (orchestrate.py)",
+                "note": f"{state}->merged: PR {branch} was merged (orchestrate.py)",
             })
     return transitions
 
 
 def apply(registry, transitions, when=None):
-    """Mutate registry theo transitions: đổi state, append task.log, giải phóng agent."""
+    """Mutate registry per transitions: change state, append task.log, free the agent."""
     when = when or now_iso()
     by_id = {t.get("id"): t for t in registry.get("tasks", [])}
     agents = {a.get("id"): a for a in registry.get("agents", [])}
@@ -100,14 +100,14 @@ def apply(registry, transitions, when=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("registry", nargs="?", default="task-registry.json")
-    ap.add_argument("--write", action="store_true", help="ghi thay đổi vào registry (mặc định: dry-run)")
-    ap.add_argument("--status-json", help="nạp map {branch: {merged,state}} từ file thay vì gọi gh (test/offline)")
+    ap.add_argument("--write", action="store_true", help="write changes to the registry (default: dry-run)")
+    ap.add_argument("--status-json", help="load a {branch: {merged,state}} map from a file instead of calling gh (test/offline)")
     args = ap.parse_args()
 
     with open(args.registry, encoding="utf-8") as f:
         registry = json.load(f)
 
-    # Lấy trạng thái PR
+    # Get PR status
     if args.status_json:
         with open(args.status_json, encoding="utf-8") as f:
             pr_status = json.load(f)
@@ -126,30 +126,30 @@ def main():
     print(f"ORCHESTRATE: {args.registry}  ({'WRITE' if args.write else 'dry-run'})")
     print("=" * 60)
     if transitions:
-        print("\n▶ Đề xuất chuyển state:")
+        print("\n▶ Proposed state changes:")
         for tr in transitions:
-            free = f", giải phóng {tr['free_agent']}" if tr["free_agent"] else ""
-            print(f"   - {tr['task']}: {tr['from']}→{tr['to']}{free}")
+            free = f", free {tr['free_agent']}" if tr["free_agent"] else ""
+            print(f"   - {tr['task']}: {tr['from']}->{tr['to']}{free}")
     else:
-        print("\n(không có transition — không PR nào mới merged)")
+        print("\n(no transitions — no newly merged PR)")
 
     if args.write and transitions:
         apply(registry, transitions)
         with open(args.registry, "w", encoding="utf-8") as f:
             json.dump(registry, f, ensure_ascii=False, indent=2)
             f.write("\n")
-        print(f"\n✓ Đã ghi {len(transitions)} thay đổi vào {args.registry}.")
+        print(f"\n✓ Wrote {len(transitions)} change(s) to {args.registry}.")
     elif transitions:
-        print("\n(dry-run — thêm --write để áp)")
+        print("\n(dry-run — add --write to apply)")
 
     waves, stuck = compute_waves(registry.get("tasks", []))
-    print("\n▶ WAVE kế tiếp (task chưa merged):")
+    print("\n▶ Next WAVES (unmerged tasks):")
     if not waves:
-        print("   (không có task nào chạy được)")
+        print("   (no runnable tasks)")
     for k, w in enumerate(waves, 1):
         print(f"   Wave {k}: {', '.join(w)}")
     if stuck:
-        print(f"\n✗ KẸT (chu trình/dep thiếu): {', '.join(stuck)}")
+        print(f"\n✗ STUCK (cycle/missing dep): {', '.join(stuck)}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 .PHONY: bootstrap lint test build check-registry waves orchestrate
 
 bootstrap:
-	@echo "Không có dependency ngoài Python 3 standard library."
+	@echo "No dependencies beyond the Python 3 standard library."
 
 lint:
 	PYTHONPYCACHEPREFIX=.cache/pyc python3 -m compileall -q scripts tests

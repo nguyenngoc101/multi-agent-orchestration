@@ -1,27 +1,27 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Task Registry — nguồn sự thật cho multi-agent orchestration",
-  "description": "Orchestrator và mọi worker đọc/ghi file này (hoặc tương đương GitHub Projects). KHÔNG giữ state trong context của agent.",
+  "title": "Task Registry — source of truth for multi-agent orchestration",
+  "description": "The orchestrator and every worker read/write this file (or an equivalent like GitHub Projects). Do NOT keep state in an agent's context.",
   "type": "object",
   "required": ["agents", "tasks"],
   "additionalProperties": false,
   "properties": {
     "agents": {
-      "description": "Pool worker. Orchestrator match task theo capabilities và chọn theo status=idle.",
+      "description": "Worker pool. The orchestrator matches tasks by capabilities and picks by status=idle.",
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["id", "kind", "capabilities", "status"],
         "properties": {
-          "id":   { "type": "string", "description": "vd worker-1" },
+          "id":   { "type": "string", "description": "e.g. worker-1" },
           "kind": { "type": "string", "enum": ["claude", "codex", "other"] },
           "capabilities": {
             "type": "array",
-            "description": "Tag năng lực để matching. vd: backend, frontend, sql, refactor, test, infra",
+            "description": "Capability tags for matching. e.g. backend, frontend, sql, refactor, test, infra",
             "items": { "type": "string" }
           },
-          "max_concurrent": { "type": "integer", "default": 1, "description": "1 worker = 1 task tại một thời điểm là an toàn nhất" },
+          "max_concurrent": { "type": "integer", "default": 1, "description": "1 worker = 1 task at a time is the safest" },
           "status": { "type": "string", "enum": ["idle", "busy", "offline"] },
           "current_task": { "type": ["string", "null"] }
         }
@@ -34,50 +34,50 @@
         "additionalProperties": false,
         "required": ["id", "title", "scope", "state"],
         "properties": {
-          "id":    { "type": "string", "description": "vd T-101; dùng làm slug branch feature/T-101" },
+          "id":    { "type": "string", "description": "e.g. T-101; used as the branch slug feature/T-101" },
           "title": { "type": "string" },
-          "issue": { "type": "string", "description": "URL GitHub issue nếu có" },
+          "issue": { "type": "string", "description": "GitHub issue URL if any" },
           "scope": {
             "type": "object",
-            "description": "Ranh giới file — chống hai worker giẫm nhau. Bắt buộc khai báo.",
+            "description": "File boundary — stops two workers from clobbering each other. Must be declared.",
             "required": ["allow"],
             "additionalProperties": false,
             "properties": {
-              "allow": { "type": "array", "items": { "type": "string" }, "description": "glob thư mục/file worker ĐƯỢC sửa, vd src/payment/**" },
-              "deny":  { "type": "array", "items": { "type": "string" }, "description": "glob cấm tuyệt đối, vd src/shared/**" }
+              "allow": { "type": "array", "items": { "type": "string" }, "description": "globs of dirs/files the worker MAY change, e.g. src/payment/**" },
+              "deny":  { "type": "array", "items": { "type": "string" }, "description": "globs that are strictly forbidden, e.g. src/shared/**" }
             }
           },
           "requires": {
             "type": "array",
-            "description": "Capability cần để làm task — orchestrator match với agents[].capabilities",
+            "description": "Capabilities needed for the task — the orchestrator matches these against agents[].capabilities",
             "items": { "type": "string" }
           },
           "depends_on": {
             "type": "array",
-            "description": "Task phải xong trước (id). Orchestrator không giao khi dependency chưa merged.",
+            "description": "Tasks that must finish first (by id). The orchestrator won't assign until dependencies are merged.",
             "items": { "type": "string" }
           },
-          "priority": { "type": "integer", "default": 3, "description": "1 cao nhất" },
+          "priority": { "type": "integer", "default": 3, "description": "1 is highest" },
           "state": {
             "type": "string",
             "enum": ["backlog", "assigned", "in_progress", "in_review", "changes_requested", "merged", "blocked"],
-            "description": "Vòng đời task. Orchestrator điều khiển chuyển trạng thái."
+            "description": "Task lifecycle. The orchestrator drives the state transitions."
           },
-          "assignee":   { "type": ["string", "null"], "description": "agent id đang giữ task" },
+          "assignee":   { "type": ["string", "null"], "description": "id of the agent holding the task" },
           "branch":     { "type": ["string", "null"], "description": "feature/<id>" },
-          "pr":         { "type": ["string", "null"], "description": "URL PR" },
+          "pr":         { "type": ["string", "null"], "description": "PR URL" },
           "blocked_reason": { "type": ["string", "null"] },
           "log": {
             "type": "array",
-            "description": "Nhật ký quyết định/chuyển state của task — context TÁI DỰNG được, KHÔNG nằm trong đầu agent. Orchestrator append một dòng mỗi lần đổi state; ghi quyết định xuyên suốt vào docs/decisions/ thay vì ở đây.",
+            "description": "Decision/state-transition log for the task — RECONSTRUCTABLE context, NOT held in an agent's head. The orchestrator appends a line on each state change; record cross-cutting decisions in docs/decisions/ instead of here.",
             "items": {
               "type": "object",
               "additionalProperties": false,
               "required": ["note"],
               "properties": {
-                "ts":   { "type": "string", "description": "ISO-8601, vd 2026-07-19T13:00:00Z" },
-                "by":   { "type": "string", "description": "ai ghi: 'orchestrator' hoặc agent id" },
-                "note": { "type": "string", "description": "một dòng: điều gì xảy ra / quyết định gì" }
+                "ts":   { "type": "string", "description": "ISO-8601, e.g. 2026-07-19T13:00:00Z" },
+                "by":   { "type": "string", "description": "who wrote it: 'orchestrator' or an agent id" },
+                "note": { "type": "string", "description": "one line: what happened / what was decided" }
               }
             }
           }

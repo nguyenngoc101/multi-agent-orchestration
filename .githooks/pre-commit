@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# pre-commit — chặn commit trực tiếp khi HEAD đang ở nhánh do người kiểm soát.
-# Bắt sớm trường hợp agent lỡ checkout nhầm nhánh rồi commit.
+# pre-commit — block a direct commit when HEAD is on a human-controlled branch.
+# Catches early the case where an agent accidentally checked out the wrong branch and committed.
 
 set -euo pipefail
 
@@ -8,8 +8,8 @@ PROTECTED_REGEX='^(main|develop|release/.*|hotfix/.*)$'
 branch="$(git symbolic-ref --short HEAD 2>/dev/null || echo '')"
 
 if [[ "$branch" =~ $PROTECTED_REGEX ]]; then
-  echo "✗ pre-commit: đang ở nhánh '$branch' — cấm commit trực tiếp." >&2
-  echo "  Chuyển sang feature/<task> của bạn rồi commit lại." >&2
+  echo "✗ pre-commit: on branch '$branch' — direct commits are forbidden." >&2
+  echo "  Switch to your feature/<task> branch and commit again." >&2
   exit 1
 fi
 
