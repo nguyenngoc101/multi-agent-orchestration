@@ -25,10 +25,22 @@ else
   exit 1
 fi
 
-echo "→ Rebase lên $BASE"
+published=false
+if git remote get-url origin >/dev/null 2>&1 && \
+   git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+  published=true
+fi
+
+echo "→ Cập nhật từ $BASE"
 if git remote get-url origin >/dev/null 2>&1; then
   git fetch origin
-  git rebase "$BASE"
+  if [[ "$published" == true ]]; then
+    # Rebase would rewrite an already-published branch and require a forbidden
+    # force-push. Preserve history with a regular merge instead.
+    git merge --no-edit "$BASE"
+  else
+    git rebase "$BASE"
+  fi
 else
   echo "ℹ Không có remote 'origin' — rebase lên nhánh local nếu có."
   local_base="${BASE#origin/}"

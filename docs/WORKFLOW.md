@@ -24,7 +24,9 @@ WORKER (local)                         GITHUB
 
 ## Giai đoạn 1 — Orchestrator chia & giao (local hoặc CI)
 
-1. Chỉnh `task-registry.json`: thêm task với `scope.allow`, `requires`, `depends_on`.
+1. Tạo PR control-plane chỉ đổi `task-registry.json`: thêm task với `scope.allow`,
+   `requires`, `depends_on`. PR này phải được CODEOWNER duyệt và merge vào `develop`
+   trước khi tạo feature branch; worker không được tự thêm/nới policy của mình.
 2. `just check-registry` — phải OK, xem các wave. FAIL (chu trình/dep thiếu) thì sửa.
 3. Orchestrator chọn task ở wave hiện tại, match agent idle, giao theo WORKER_PROTOCOL.
 
@@ -43,6 +45,9 @@ just bootstrap                       # cài dependency cho worktree này
 ./scripts/submit-task.sh             # rebase origin/develop + lint+test+build + push
 ```
 
+Lần push đầu script rebase để giữ lịch sử thẳng. Nếu branch đã có trên remote,
+script merge `origin/develop` thay vì rebase để không cần force-push lịch sử đã công bố.
+
 Hook cục bộ (`.githooks/pre-commit`, `pre-push`) chặn nếu lỡ commit/push vào nhánh cấm.
 
 ## Giai đoạn 3 — GitHub (tự động)
@@ -58,6 +63,8 @@ Trên PR chạy song song:
 
 PR xanh + được duyệt → vào **merge queue**. Queue ghép từng PR lên develop mới nhất,
 chạy lại CI, merge tuần tự (squash). Đây là chỗ nối tiếp hóa để song song an toàn.
+Guard và registry policy dùng để xét feature PR được checkout từ base SHA, nên PR
+không thể sửa chính trọng tài hoặc scope của mình để vượt kiểm tra.
 
 ## Giai đoạn 4 — Dọn & lặp
 

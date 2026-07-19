@@ -15,7 +15,9 @@ Không phụ thuộc thư viện ngoài — chạy bằng Python 3 chuẩn.
 Dùng: python3 scripts/check-registry.py [đường-dẫn-registry.json]
 Exit code != 0 nếu có lỗi cứng (CI dùng được).
 """
-import json, sys, fnmatch
+import fnmatch
+import json
+import sys
 from collections import defaultdict
 
 TERMINAL = {"merged"}
@@ -28,8 +30,65 @@ AGENT_STATUS  = {"idle", "busy", "offline"}
 AGENT_KINDS   = {"claude", "codex", "other"}
 
 def load(path):
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def validate_structure(reg):
+    """Validate types before graph checks so malformed input reports clean errors."""
+    errors = []
+    if not isinstance(reg, dict):
+        return ["Registry phải là một JSON object."], [], []
+
+    tasks = reg.get("tasks")
+    agents = reg.get("agents")
+    if not isinstance(tasks, list):
+        errors.append("Registry thiếu mảng 'tasks'.")
+        tasks = []
+    if not isinstance(agents, list):
+        errors.append("Registry thiếu mảng 'agents'.")
+        agents = []
+
+    for index, task in enumerate(tasks):
+        if not isinstance(task, dict):
+            errors.append(f"Task tại vị trí {index} phải là object.")
+            continue
+        for key in ("id", "title", "scope", "state"):
+            if key not in task:
+                errors.append(f"Task thiếu field '{key}': {task.get('id', task)}")
+        for key in ("id", "title", "state"):
+            if key in task and not isinstance(task[key], str):
+                errors.append(f"Task tại vị trí {index} field '{key}' phải là string.")
+        scope = task.get("scope")
+        if scope is not None and not isinstance(scope, dict):
+            errors.append(f"Task {task.get('id')} scope phải là object.")
+        elif isinstance(scope, dict):
+            allow = scope.get("allow")
+            deny = scope.get("deny", [])
+            if not isinstance(allow, list) or not all(isinstance(g, str) for g in allow):
+                errors.append(f"Task {task.get('id')} scope.allow phải là mảng string.")
+            if not isinstance(deny, list) or not all(isinstance(g, str) for g in deny):
+                errors.append(f"Task {task.get('id')} scope.deny phải là mảng string.")
+        for key in ("depends_on", "requires"):
+            value = task.get(key, [])
+            if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+                errors.append(f"Task {task.get('id')} {key} phải là mảng string.")
+
+    for index, agent in enumerate(agents):
+        if not isinstance(agent, dict):
+            errors.append(f"Agent tại vị trí {index} phải là object.")
+            continue
+        for key in ("id", "kind", "status"):
+            if key in agent and not isinstance(agent[key], str):
+                errors.append(f"Agent tại vị trí {index} field '{key}' phải là string.")
+        capabilities = agent.get("capabilities")
+        if capabilities is not None and (
+            not isinstance(capabilities, list)
+            or not all(isinstance(value, str) for value in capabilities)
+        ):
+            errors.append(f"Agent {agent.get('id')} capabilities phải là mảng string.")
+
+    return errors, tasks, agents
 
 def globs_overlap(a_globs, b_globs):
     """Hai tập glob coi là chồng nếu một glob của bên này khớp prefix thư mục của bên kia.
@@ -133,21 +192,30 @@ def validate_agents(agents, tasks, task_ids, warnings):
 
 def main():
     path = sys.argv[1] if len(sys.argv) > 1 else "task-registry.json"
-    reg = load(path)
-    tasks = reg.get("tasks", [])
-    agents = reg.get("agents", [])
-    errors, warnings = [], []
+    try:
+        reg = load(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"✗ Không đọc được registry '{path}': {exc}")
+        sys.exit(1)
+
+    errors, tasks, agents = validate_structure(reg)
+    warnings = []
+
+    if errors:
+        print("=" * 60)
+        print(f"REGISTRY CHECK: {path}")
+        print("=" * 60)
+        print("\n✗  LỖI CỨNG:")
+        for error in errors:
+            print("   -", error)
+        print("\nKẾT QUẢ: FAIL")
+        sys.exit(1)
 
     ids = {t["id"] for t in tasks}
 
     # 1. field bắt buộc + enum + trùng id (task)
     seen = set()
     for t in tasks:
-        for k in ("id", "title", "scope", "state"):
-            if k not in t:
-                errors.append(f"Task thiếu field '{k}': {t.get('id', t)}")
-        if "scope" in t and "allow" not in t["scope"]:
-            errors.append(f"Task {t.get('id')} scope thiếu 'allow'")
         tid = t.get("id")
         if tid is not None:
             if tid in seen:

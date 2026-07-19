@@ -13,8 +13,11 @@ Exit != 0 nếu có file ngoài scope.
 import argparse, json, subprocess, sys, fnmatch
 
 def changed_files(base, head):
+    # Disable rename collapsing so both the old and new path are checked.
+    # Otherwise moving an out-of-scope file into an allowed directory only
+    # reports the destination and silently modifies the source scope.
     out = subprocess.run(
-        ["git", "diff", "--name-only", f"{base}...{head}"],
+        ["git", "diff", "--name-only", "--no-renames", f"{base}...{head}"],
         capture_output=True, text=True, check=True).stdout
     return [l for l in out.splitlines() if l.strip()]
 

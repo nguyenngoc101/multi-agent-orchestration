@@ -25,9 +25,13 @@ Với mỗi target (`main`, `develop`, `release/*`, `hotfix/*`):
 - Block force pushes
 - Restrict who can push → chỉ team người (loại tài khoản agent) cho main/release/hotfix
 - (main/release) Require review from Code Owners nếu dùng CODEOWNERS
+- Bật merge queue cho `develop`; required workflows phải lắng nghe `merge_group`
 
 Phân quyền agent: tạo một machine account / token cho agent, chỉ cấp quyền đủ để
 push `feature/*` và tạo PR. KHÔNG cho quyền admin/bypass.
+
+Thay owner mẫu trong `.github/CODEOWNERS` bằng team/user thật. Registry control-plane
+phải qua PR được CODEOWNER duyệt trước khi feature branch tương ứng được tạo.
 
 ## GitLab — Protected branches + Push rules
 

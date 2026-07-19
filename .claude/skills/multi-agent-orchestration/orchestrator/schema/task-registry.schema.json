@@ -3,12 +3,15 @@
   "title": "Task Registry — nguồn sự thật cho multi-agent orchestration",
   "description": "Orchestrator và mọi worker đọc/ghi file này (hoặc tương đương GitHub Projects). KHÔNG giữ state trong context của agent.",
   "type": "object",
+  "required": ["agents", "tasks"],
+  "additionalProperties": false,
   "properties": {
     "agents": {
       "description": "Pool worker. Orchestrator match task theo capabilities và chọn theo status=idle.",
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["id", "kind", "capabilities", "status"],
         "properties": {
           "id":   { "type": "string", "description": "vd worker-1" },
@@ -28,6 +31,7 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["id", "title", "scope", "state"],
         "properties": {
           "id":    { "type": "string", "description": "vd T-101; dùng làm slug branch feature/T-101" },
@@ -37,6 +41,7 @@
             "type": "object",
             "description": "Ranh giới file — chống hai worker giẫm nhau. Bắt buộc khai báo.",
             "required": ["allow"],
+            "additionalProperties": false,
             "properties": {
               "allow": { "type": "array", "items": { "type": "string" }, "description": "glob thư mục/file worker ĐƯỢC sửa, vd src/payment/**" },
               "deny":  { "type": "array", "items": { "type": "string" }, "description": "glob cấm tuyệt đối, vd src/shared/**" }
