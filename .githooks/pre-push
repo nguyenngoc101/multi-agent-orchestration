@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# pre-push — chặn agent push vào nhánh do người kiểm soát.
+# Kích hoạt: git config core.hooksPath .githooks
+# Lớp phòng thủ CỤC BỘ. Branch protection trên server mới là lớp không-thể-lách.
+
+set -euo pipefail
+
+PROTECTED_REGEX='^(main|develop|release/.*|hotfix/.*)$'
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # remote_ref dạng refs/heads/<branch>
+  branch="${remote_ref#refs/heads/}"
+
+  if [[ "$branch" =~ $PROTECTED_REGEX ]]; then
+    echo "✗ pre-push: cấm push thẳng vào '$branch'." >&2
+    echo "  Nhánh này do người kiểm soát. Agent chỉ push feature/* và mở PR vào develop." >&2
+    echo "  Nếu bạn là người và cố ý: tạm bỏ hook bằng 'git push --no-verify'." >&2
+    exit 1
+  fi
+
+  # Chặn force-push (agent không được viết lại lịch sử nhánh chung)
+  if [[ "$remote_sha" != "0000000000000000000000000000000000000000" ]]; then
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+      echo "✗ pre-push: phát hiện force-push (non-fast-forward) vào '$branch'." >&2
+      echo "  Agent không được viết lại lịch sử đã push." >&2
+      exit 1
+    fi
+  fi
+done
+
+exit 0

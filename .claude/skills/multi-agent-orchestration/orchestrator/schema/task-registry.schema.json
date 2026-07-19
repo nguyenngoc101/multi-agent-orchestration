@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Task Registry — nguồn sự thật cho multi-agent orchestration",
+  "description": "Orchestrator và mọi worker đọc/ghi file này (hoặc tương đương GitHub Projects). KHÔNG giữ state trong context của agent.",
+  "type": "object",
+  "properties": {
+    "agents": {
+      "description": "Pool worker. Orchestrator match task theo capabilities và chọn theo status=idle.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "capabilities", "status"],
+        "properties": {
+          "id":   { "type": "string", "description": "vd worker-1" },
+          "kind": { "type": "string", "enum": ["claude", "codex", "other"] },
+          "capabilities": {
+            "type": "array",
+            "description": "Tag năng lực để matching. vd: backend, frontend, sql, refactor, test, infra",
+            "items": { "type": "string" }
+          },
+          "max_concurrent": { "type": "integer", "default": 1, "description": "1 worker = 1 task tại một thời điểm là an toàn nhất" },
+          "status": { "type": "string", "enum": ["idle", "busy", "offline"] },
+          "current_task": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "scope", "state"],
+        "properties": {
+          "id":    { "type": "string", "description": "vd T-101; dùng làm slug branch feature/T-101" },
+          "title": { "type": "string" },
+          "issue": { "type": "string", "description": "URL GitHub issue nếu có" },
+          "scope": {
+            "type": "object",
+            "description": "Ranh giới file — chống hai worker giẫm nhau. Bắt buộc khai báo.",
+            "required": ["allow"],
+            "properties": {
+              "allow": { "type": "array", "items": { "type": "string" }, "description": "glob thư mục/file worker ĐƯỢC sửa, vd src/payment/**" },
+              "deny":  { "type": "array", "items": { "type": "string" }, "description": "glob cấm tuyệt đối, vd src/shared/**" }
+            }
+          },
+          "requires": {
+            "type": "array",
+            "description": "Capability cần để làm task — orchestrator match với agents[].capabilities",
+            "items": { "type": "string" }
+          },
+          "depends_on": {
+            "type": "array",
+            "description": "Task phải xong trước (id). Orchestrator không giao khi dependency chưa merged.",
+            "items": { "type": "string" }
+          },
+          "priority": { "type": "integer", "default": 3, "description": "1 cao nhất" },
+          "state": {
+            "type": "string",
+            "enum": ["backlog", "assigned", "in_progress", "in_review", "changes_requested", "merged", "blocked"],
+            "description": "Vòng đời task. Orchestrator điều khiển chuyển trạng thái."
+          },
+          "assignee":   { "type": ["string", "null"], "description": "agent id đang giữ task" },
+          "branch":     { "type": ["string", "null"], "description": "feature/<id>" },
+          "pr":         { "type": ["string", "null"], "description": "URL PR" },
+          "blocked_reason": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

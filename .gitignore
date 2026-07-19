@@ -1,0 +1,6 @@
+# Worktree của agent nằm ngoài repo, nhưng phòng khi đặt trong:
+/wt/
+../wt/
+*.local
+.env.local
+__pycache__/

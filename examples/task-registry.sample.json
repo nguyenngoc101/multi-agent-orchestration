@@ -1,0 +1,16 @@
+{
+  "_comment": "Registry mẫu cho practice: 3 wave, mỗi wave 2 task song song. Kiểm tra: python3 scripts/check-registry.py examples/task-registry.sample.json",
+  "agents": [
+    { "id": "worker-1", "kind": "claude", "capabilities": ["backend", "sql"],       "max_concurrent": 1, "status": "idle", "current_task": null },
+    { "id": "worker-2", "kind": "codex",  "capabilities": ["frontend", "test"],      "max_concurrent": 1, "status": "idle", "current_task": null },
+    { "id": "worker-3", "kind": "claude", "capabilities": ["backend", "infra"],      "max_concurrent": 1, "status": "idle", "current_task": null }
+  ],
+  "tasks": [
+    { "id": "T-1", "title": "Model + schema payment",  "scope": { "allow": ["src/payment/model/**"] }, "requires": ["backend"],  "depends_on": [],            "priority": 1, "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null },
+    { "id": "T-2", "title": "Khung UI history",         "scope": { "allow": ["src/web/history/**"] },   "requires": ["frontend"], "depends_on": [],            "priority": 1, "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null },
+    { "id": "T-3", "title": "Endpoint refund",          "scope": { "allow": ["src/payment/api/**"] },   "requires": ["backend"],  "depends_on": ["T-1"],       "priority": 2, "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null },
+    { "id": "T-4", "title": "Gọi API từ UI history",    "scope": { "allow": ["src/web/history/api/**"] },"requires": ["frontend"], "depends_on": ["T-2"],       "priority": 2, "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null },
+    { "id": "T-5", "title": "Migration bảng refund",    "scope": { "allow": ["db/migrations/**"] },     "requires": ["sql"],      "depends_on": ["T-3"],       "priority": 3, "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null },
+    { "id": "T-6", "title": "E2E test luồng refund",    "scope": { "allow": ["test/e2e/**"] },          "requires": ["test"],     "depends_on": ["T-4"],       "priority": 3, "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null }
+  ]
+}

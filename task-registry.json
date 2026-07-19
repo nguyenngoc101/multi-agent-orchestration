@@ -1,0 +1,29 @@
+{
+  "agents": [
+    { "id": "worker-1", "kind": "claude", "capabilities": ["backend", "sql", "refactor"], "max_concurrent": 1, "status": "idle",  "current_task": null },
+    { "id": "worker-2", "kind": "codex",  "capabilities": ["frontend", "test"],           "max_concurrent": 1, "status": "busy",  "current_task": "T-102" },
+    { "id": "worker-3", "kind": "claude", "capabilities": ["backend", "infra"],            "max_concurrent": 1, "status": "idle",  "current_task": null }
+  ],
+  "tasks": [
+    {
+      "id": "T-101", "title": "Thêm endpoint refund cho payment",
+      "issue": "https://github.com/org/repo/issues/101",
+      "scope": { "allow": ["src/payment/**", "test/payment/**"], "deny": ["src/shared/**"] },
+      "requires": ["backend"], "depends_on": [], "priority": 1,
+      "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null
+    },
+    {
+      "id": "T-102", "title": "Màn hình lịch sử giao dịch",
+      "scope": { "allow": ["src/web/history/**"], "deny": [] },
+      "requires": ["frontend"], "depends_on": [], "priority": 2,
+      "state": "in_progress", "assignee": "worker-2", "branch": "feature/T-102", "pr": null, "blocked_reason": null
+    },
+    {
+      "id": "T-103", "title": "Migration bảng refund",
+      "scope": { "allow": ["db/migrations/**"], "deny": [] },
+      "requires": ["sql"], "depends_on": ["T-101"], "priority": 1,
+      "state": "blocked", "assignee": null, "branch": null, "pr": null,
+      "blocked_reason": "Chờ T-101 merged (schema phụ thuộc)"
+    }
+  ]
+}

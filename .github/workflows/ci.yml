@@ -1,0 +1,42 @@
+name: ci
+
+# Gate cho mọi PR vào develop/main. Stack-agnostic: gọi just|make, không hardcode stack.
+on:
+  pull_request:
+    branches: [develop, main, "release/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect runner (just | make)
+        id: runner
+        run: |
+          if command -v just >/dev/null 2>&1 && [ -f justfile -o -f Justfile ]; then
+            echo "cmd=just" >> "$GITHUB_OUTPUT"
+          elif [ -f Makefile -o -f makefile ]; then
+            echo "cmd=make" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Không thấy justfile/Makefile — định nghĩa lint/test/build ở đó."
+            exit 1
+          fi
+
+      # Cài just nếu justfile tồn tại nhưng runner chưa có
+      - name: Install just
+        if: steps.runner.outputs.cmd == 'just'
+        uses: extractions/setup-just@v2
+
+      - name: Lint
+        run: ${{ steps.runner.outputs.cmd }} lint
+
+      - name: Test
+        run: ${{ steps.runner.outputs.cmd }} test
+
+      - name: Build
+        run: ${{ steps.runner.outputs.cmd }} build
