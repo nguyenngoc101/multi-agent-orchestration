@@ -6,6 +6,7 @@ name: registry-guard
 on:
   pull_request:
     branches: [develop]
+  merge_group:
   push:
     paths: ["task-registry.json"]
   workflow_dispatch:
@@ -19,18 +20,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check registry (chu trình, overlap, wave)
-        run: python3 scripts/check-registry.py task-registry.json
+        with:
+          path: candidate
+      # Never execute validator code supplied by the candidate change.
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          path: trusted
+      - name: Check candidate registry with trusted validator
+        run: python3 trusted/scripts/check-registry.py candidate/task-registry.json
 
   enforce-scope:
     # Chỉ chạy cho PR từ nhánh feature/*
-    if: startsWith(github.head_ref, 'feature/')
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'feature/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Enforce file scope theo registry
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: candidate
+      # Policy and enforcement code must come from the immutable PR base.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted
+      - name: Enforce file scope using trusted base policy
         env:
           HEAD_REF: ${{ github.head_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -39,7 +54,8 @@ jobs:
           # task id = phần sau 'feature/'
           TASK_ID="${HEAD_REF#feature/}"
           echo "Task: $TASK_ID"
-          python3 scripts/enforce-scope.py \
-            --registry task-registry.json \
+          cd candidate
+          python3 ../trusted/scripts/enforce-scope.py \
+            --registry ../trusted/task-registry.json \
             --task "$TASK_ID" \
             --base "$BASE_SHA" --head "$HEAD_SHA"

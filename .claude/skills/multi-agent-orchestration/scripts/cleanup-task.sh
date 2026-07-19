@@ -6,6 +6,11 @@ set -euo pipefail
 
 task="${1:?Cần task-name. Dùng: ./scripts/cleanup-task.sh <task-name>}"
 
+if [[ ! "$task" =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ ]]; then
+  echo "✗ task-name không hợp lệ: '$task' (chỉ A-Z, a-z, 0-9, '-')." >&2
+  exit 1
+fi
+
 MAIN_REPO="$(git rev-parse --show-toplevel)"
 BRANCH="feature/${task}"
 WT_DIR="${WORKTREE_ROOT:-${MAIN_REPO}/../wt}/${task}"

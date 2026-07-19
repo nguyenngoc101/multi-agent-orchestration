@@ -65,7 +65,8 @@ chmod +x .githooks/* scripts/*.sh scripts/*.py
 
 # 2. Cài just (hoặc dùng Makefile) — https://github.com/casey/just
 
-# 3. Sửa justfile: thay placeholder lint/test/build bằng lệnh stack của bạn
+# 3. Repo mẫu tự kiểm tra bằng Python standard library. Khi áp dụng vào app,
+#    mở rộng lint/test/build trong justfile/Makefile bằng lệnh stack của bạn.
 
 # 4. Thử kiểm tra registry
 just check-registry            # in ra các wave song song
@@ -84,3 +85,7 @@ vi phạm scope bị CI chặn, và full vòng release.
 Mô hình orchestrator mạnh nhưng **lead là điểm lỗi tập trung**. Giai đoạn đầu giữ
 người ở khâu duyệt merge vào develop, quan sát vài chục task xem scope có sạch không,
 rồi mới nới quyền tự động. Đừng full-auto từ ngày đầu.
+
+Registry và script guard dùng để xét một PR luôn được đọc từ base SHA đáng tin cậy;
+không chạy bản guard do chính PR cung cấp. Task mới phải được thêm vào `develop`
+trước bằng PR control-plane có CODEOWNER duyệt, rồi worker mới mở feature PR.

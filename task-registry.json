@@ -22,8 +22,8 @@
       "id": "T-103", "title": "Migration bảng refund",
       "scope": { "allow": ["db/migrations/**"], "deny": [] },
       "requires": ["sql"], "depends_on": ["T-101"], "priority": 1,
-      "state": "blocked", "assignee": null, "branch": null, "pr": null,
-      "blocked_reason": "Chờ T-101 merged (schema phụ thuộc)"
+      "state": "backlog", "assignee": null, "branch": null, "pr": null,
+      "blocked_reason": null
     }
   ]
 }

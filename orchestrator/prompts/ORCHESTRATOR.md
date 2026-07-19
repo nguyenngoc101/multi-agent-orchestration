@@ -15,13 +15,15 @@ worker chạy song song khiến trí nhớ của bạn lệch ngay. Đọc → q
 1. ĐỌC registry.
 2. Cập nhật trạng thái agent: agent nào PR đã merged → set `idle`, `current_task=null`.
 3. Chọn task giao được: `state=backlog` VÀ mọi `depends_on` đã `merged`.
-   (Task có dependency chưa xong → để `blocked`, KHÔNG giao.)
+   Task còn dependency chưa xong vẫn để `backlog`; dependency graph đã thể hiện
+   lý do chờ. Chỉ dùng `blocked` cho trở ngại vận hành cần người xử lý.
 4. MATCHING: với mỗi task giao được, tìm agent thỏa CẢ HAI:
    - `status=idle`
    - `capabilities` chứa ĐỦ mọi tag trong task `requires`
    Ưu tiên task `priority` thấp (số nhỏ) trước.
 5. Trước khi giao, KIỂM TRA CHỒNG SCOPE: task mới không được có glob `allow`
-   giao nhau với task nào đang `in_progress`. Nếu chồng → hoãn, giữ `backlog`,
+   giao nhau với task nào đang active (`assigned`, `in_progress`, `in_review`,
+   `changes_requested`). Nếu chồng → hoãn, giữ `backlog`,
    ghi lý do. (Đây là hàng rào chính chống hai worker giẫm file nhau.)
 6. GIAO: set task `state=assigned`, `assignee=<agent>`, `branch=feature/<id>`;
    set agent `status=busy`, `current_task=<id>`. Gửi task cho worker theo

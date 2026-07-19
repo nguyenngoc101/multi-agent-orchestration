@@ -1,7 +1,7 @@
 # Vùng nhạy cảm bắt buộc người review, agent không tự merge được.
-# Thay @your-team bằng team/username thật.
-/src/shared/         @your-team
-/db/migrations/      @your-team
-/.github/            @your-team
-/task-registry.json  @your-team
-/scripts/            @your-team
+# Repository owner reviews sensitive control-plane and shared areas.
+/src/shared/         @nguyenngoc101
+/db/migrations/      @nguyenngoc101
+/.github/            @nguyenngoc101
+/task-registry.json  @nguyenngoc101
+/scripts/            @nguyenngoc101
