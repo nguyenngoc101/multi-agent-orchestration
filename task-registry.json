@@ -16,14 +16,21 @@
       "id": "T-102", "title": "Màn hình lịch sử giao dịch",
       "scope": { "allow": ["src/web/history/**"], "deny": [] },
       "requires": ["frontend"], "depends_on": [], "priority": 2,
-      "state": "in_progress", "assignee": "worker-2", "branch": "feature/T-102", "pr": null, "blocked_reason": null
+      "state": "in_progress", "assignee": "worker-2", "branch": "feature/T-102", "pr": null, "blocked_reason": null,
+      "log": [
+        { "ts": "2026-07-19T09:00:00Z", "by": "orchestrator", "note": "backlog→assigned cho worker-2 (khớp capability frontend, idle)" },
+        { "ts": "2026-07-19T09:05:00Z", "by": "worker-2", "note": "assigned→in_progress; theo ADR-0001 dùng component bảng dùng chung ở src/web/shared (chỉ đọc)" }
+      ]
     },
     {
       "id": "T-103", "title": "Migration bảng refund",
       "scope": { "allow": ["db/migrations/**"], "deny": [] },
       "requires": ["sql"], "depends_on": ["T-101"], "priority": 1,
       "state": "backlog", "assignee": null, "branch": null, "pr": null,
-      "blocked_reason": null
+      "blocked_reason": null,
+      "log": [
+        { "by": "orchestrator", "note": "giữ backlog: chờ T-101 merged (schema payment phụ thuộc)" }
+      ]
     }
   ]
 }

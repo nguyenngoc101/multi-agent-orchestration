@@ -66,7 +66,21 @@
           "assignee":   { "type": ["string", "null"], "description": "agent id đang giữ task" },
           "branch":     { "type": ["string", "null"], "description": "feature/<id>" },
           "pr":         { "type": ["string", "null"], "description": "URL PR" },
-          "blocked_reason": { "type": ["string", "null"] }
+          "blocked_reason": { "type": ["string", "null"] },
+          "log": {
+            "type": "array",
+            "description": "Nhật ký quyết định/chuyển state của task — context TÁI DỰNG được, KHÔNG nằm trong đầu agent. Orchestrator append một dòng mỗi lần đổi state; ghi quyết định xuyên suốt vào docs/decisions/ thay vì ở đây.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["note"],
+              "properties": {
+                "ts":   { "type": "string", "description": "ISO-8601, vd 2026-07-19T13:00:00Z" },
+                "by":   { "type": "string", "description": "ai ghi: 'orchestrator' hoặc agent id" },
+                "note": { "type": "string", "description": "một dòng: điều gì xảy ra / quyết định gì" }
+              }
+            }
+          }
         }
       }
     }

@@ -51,6 +51,7 @@ docs/
   WORKFLOW.md                  Full quy trình dev local → GitHub
   branch-protection.md         Cấu hình lớp chặn phía server
   PRACTICE.md                  Bài tập thực hành từng bước
+  decisions/                   ADR — bộ nhớ CHUNG (project-context) cho mọi agent
 
 examples/
   task-registry.sample.json    Registry mẫu 3 wave (dùng đối chiếu khi luyện)
