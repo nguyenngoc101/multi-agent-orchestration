@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # submit-task.sh
-# Chạy TRONG worktree của feature branch. Rebase lên develop, chạy gate
-# (lint/test/build qua just|make), rồi push. Không tự merge — chỉ chuẩn bị PR.
-# Stack-agnostic: gate gọi qua RUNNER, không gọi thẳng công cụ stack.
+# Run INSIDE the feature branch's worktree. Update from develop, run the gate
+# (lint/test/build via just|make), then push. Does not merge — only prepares the PR.
+# Stack-agnostic: the gate goes through RUNNER, never a stack tool directly.
 
 set -euo pipefail
 
@@ -10,18 +10,18 @@ BASE="${BASE_BRANCH:-origin/develop}"
 
 branch="$(git symbolic-ref --short HEAD)"
 if [[ ! "$branch" =~ ^feature/ ]]; then
-  echo "✗ Đang ở '$branch'. Script chỉ chạy trên feature/*." >&2
+  echo "✗ On '$branch'. This script only runs on feature/*." >&2
   exit 1
 fi
 
-# Chọn runner: just > make. Không đoán lệnh stack.
+# Pick runner: just > make. Don't guess stack commands.
 if command -v just >/dev/null 2>&1 && [[ -f justfile || -f Justfile ]]; then
   RUNNER="just"
 elif [[ -f Makefile || -f makefile ]]; then
   RUNNER="make"
 else
-  echo "✗ Không tìm thấy justfile/Makefile. Thêm nó để định nghĩa lint/test/build." >&2
-  echo "  (Cố tình không hardcode lệnh stack ở đây.)" >&2
+  echo "✗ No justfile/Makefile found. Add one to define lint/test/build." >&2
+  echo "  (Deliberately not hardcoding stack commands here.)" >&2
   exit 1
 fi
 
@@ -31,7 +31,7 @@ if git remote get-url origin >/dev/null 2>&1 && \
   published=true
 fi
 
-echo "→ Cập nhật từ $BASE"
+echo "→ Update from $BASE"
 if git remote get-url origin >/dev/null 2>&1; then
   git fetch origin
   if [[ "$published" == true ]]; then
@@ -42,12 +42,12 @@ if git remote get-url origin >/dev/null 2>&1; then
     git rebase "$BASE"
   fi
 else
-  echo "ℹ Không có remote 'origin' — rebase lên nhánh local nếu có."
+  echo "ℹ No 'origin' remote — rebase onto a local branch if present."
   local_base="${BASE#origin/}"
   if git show-ref --verify --quiet "refs/heads/${local_base}"; then
     git rebase "$local_base"
   else
-    echo "ℹ Bỏ qua rebase (không tìm thấy base)."
+    echo "ℹ Skipping rebase (base not found)."
   fi
 fi
 
@@ -62,6 +62,6 @@ echo "→ Push $branch"
 git push -u origin "$branch"
 
 echo ""
-echo "✓ Sẵn sàng mở PR:  $branch  →  develop"
-echo "  Nếu có gh CLI:"
+echo "✓ Ready to open a PR:  $branch  →  develop"
+echo "  With the gh CLI:"
 echo "    gh pr create --base develop --head \"$branch\" --fill"

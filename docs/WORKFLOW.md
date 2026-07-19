@@ -1,106 +1,108 @@
-# WORKFLOW — Full quy trình dev local → GitHub
+# WORKFLOW — Full flow: local dev → GitHub
 
-Đi từ lúc orchestrator chia task tới lúc code lên PROD. Mọi lệnh stack đi qua
-`just` (hoặc `make`) nên không gắn ngôn ngữ.
+From the orchestrator splitting tasks to code reaching PROD. Every stack command goes
+through `just` (or `make`), so it's language-agnostic.
 
-## Bức tranh tổng
+## Big picture
 
 ```
 ORCHESTRATOR (Claude)
-   │  đọc registry → check wave → match worker idle → giao task
+   │  read registry → check waves → match idle worker → assign task
    ▼
 WORKER (local)                         GITHUB
   new-task.sh  ─ worktree+branch        ┌───────────────────────────┐
   code                                  │ PR  → CI (lint/test/build) │
   submit-task.sh ─ rebase+gate+push ──► │     → registry-guard       │
                                         │     → merge queue          │
-                                        │     → merge vào develop     │
+                                        │     → merge into develop    │
                                         └───────────┬───────────────┘
                                                     ▼
-                                     release cut (người) → Dev→SIT→UAT→PROD
+                                     release cut (human) → Dev→SIT→UAT→PROD
                                                     ▼
-                                        merge vào main + tag (=PROD)
+                                        merge into main + tag (=PROD)
 ```
 
-## Giai đoạn 1 — Orchestrator chia & giao (local hoặc CI)
+## Phase 1 — Orchestrator splits & assigns (local or CI)
 
-1. Tạo PR control-plane chỉ đổi `task-registry.json`: thêm task với `scope.allow`,
-   `requires`, `depends_on`. PR này phải được CODEOWNER duyệt và merge vào `develop`
-   trước khi tạo feature branch; worker không được tự thêm/nới policy của mình.
-2. `just check-registry` — phải OK, xem các wave. FAIL (chu trình/dep thiếu) thì sửa.
-3. Orchestrator chọn task ở wave hiện tại, match agent idle, giao theo WORKER_PROTOCOL.
+1. Open a control-plane PR that changes only `task-registry.json`: add a task with
+   `scope.allow`, `requires`, `depends_on`. This PR must be approved by a CODEOWNER and
+   merged into `develop` before the feature branch is created; a worker may not add or
+   widen its own policy.
+2. `just check-registry` — must be OK; view the waves. If FAIL (cycle/missing dep), fix it.
+3. The orchestrator picks a task from the current wave, matches an idle agent, assigns per WORKER_PROTOCOL.
 
-## Giai đoạn 2 — Worker làm việc (dev local)
+## Phase 2 — Worker works (local dev)
 
 ```bash
-# 1. Tạo môi trường cách ly
+# 1. Create the isolated environment
 ./scripts/new-task.sh T-101          # worktree ../wt/T-101 + branch feature/T-101
 cd ../wt/T-101
 export GIT_AUTHOR_NAME="agent-T-101" GIT_AUTHOR_EMAIL="agent-T-101@local"
-just bootstrap                       # cài dependency cho worktree này
+just bootstrap                       # install dependencies for this worktree
 
-# 2. Code — CHỈ trong scope.allow của T-101. Commit nhỏ, thường xuyên.
+# 2. Code — ONLY within T-101's scope.allow. Small, frequent commits.
 
-# 3. Chuẩn bị PR
+# 3. Prepare the PR
 ./scripts/submit-task.sh             # rebase origin/develop + lint+test+build + push
 ```
 
-Lần push đầu script rebase để giữ lịch sử thẳng. Nếu branch đã có trên remote,
-script merge `origin/develop` thay vì rebase để không cần force-push lịch sử đã công bố.
+On the first push the script rebases to keep history straight. If the branch already
+exists on the remote, the script merges `origin/develop` instead of rebasing, to avoid
+force-pushing already-published history.
 
-Hook cục bộ (`.githooks/pre-commit`, `pre-push`) chặn nếu lỡ commit/push vào nhánh cấm.
+Local hooks (`.githooks/pre-commit`, `pre-push`) block accidental commits/pushes to forbidden branches.
 
-## Giai đoạn 3 — GitHub (tự động)
+## Phase 3 — GitHub (automatic)
 
-Mở PR `feature/T-101 → develop` (submit-task gợi ý lệnh `gh pr create`).
+Open a PR `feature/T-101 → develop` (submit-task suggests the `gh pr create` command).
 
-Trên PR chạy song song:
-- **ci.yml** — lint/test/build phải xanh.
-- **registry-guard.yml** — validate registry + `enforce-scope.py` chặn nếu PR đổi
-  file ngoài `scope.allow` của T-101.
-- **CODEOWNERS** — nếu PR đụng vùng nhạy cảm (`src/shared`, `db/migrations`...),
-  bắt buộc người review.
+On the PR, running in parallel:
+- **ci.yml** — lint/test/build must be green.
+- **registry-guard.yml** — validate the registry + `enforce-scope.py` blocks the PR if it
+  changes files outside T-101's `scope.allow`.
+- **CODEOWNERS** — if the PR touches a sensitive area (`src/shared`, `db/migrations`...),
+  human review is required.
 
-PR xanh + được duyệt → vào **merge queue**. Queue ghép từng PR lên develop mới nhất,
-chạy lại CI, merge tuần tự (squash). Đây là chỗ nối tiếp hóa để song song an toàn.
-Guard và registry policy dùng để xét feature PR được checkout từ base SHA, nên PR
-không thể sửa chính trọng tài hoặc scope của mình để vượt kiểm tra.
+Green + approved PR → into the **merge queue**. The queue rebases each PR onto the latest
+develop, re-runs CI, and merges sequentially (squash). This is where serialization makes
+parallelism safe. The guard and registry policy used to evaluate a feature PR are checked
+out from the base SHA, so a PR cannot edit its own arbiter or scope to pass the checks.
 
-## Giai đoạn 4 — Dọn & lặp
+## Phase 4 — Clean up & repeat
 
 ```bash
-cd <repo chính>
-./scripts/cleanup-task.sh T-101      # gỡ worktree + branch
+cd <main repo>
+./scripts/cleanup-task.sh T-101      # remove worktree + branch
 ```
-Orchestrator cập nhật registry: T-101 = `merged`, worker về `idle`, mở khóa task
-phụ thuộc T-101 (vào wave sau).
+The orchestrator updates the registry: T-101 = `merged`, worker back to `idle`, unblocking
+tasks that depend on T-101 (into a later wave).
 
-## Giai đoạn 5 — Release (người, KHÔNG phải agent)
+## Phase 5 — Release (human, NOT an agent)
 
 ```bash
 git switch develop && git pull
-git switch -c release/2026.03        # cắt khi gom đủ feature
-# CI/CD promote CÙNG một artifact: Dev → SIT → UAT (nghiệm thu) → PROD (duyệt tay)
+git switch -c release/2026.03        # cut when enough features have accumulated
+# CI/CD promotes the SAME artifact: Dev → SIT → UAT (acceptance) → PROD (manual approval)
 git switch main && git merge --no-ff release/2026.03 && git tag v2026.03
-git switch develop && git merge --no-ff release/2026.03   # sync ngược
+git switch develop && git merge --no-ff release/2026.03   # back-merge
 ```
 
-## Giai đoạn 6 — Hotfix (người)
+## Phase 6 — Hotfix (human)
 
 ```bash
 git switch main && git switch -c hotfix/2026.03.1
-# fix → promote qua env → deploy PROD
+# fix → promote through envs → deploy PROD
 git switch main    && git merge --no-ff hotfix/2026.03.1 && git tag v2026.03.1
-git switch develop && git merge --no-ff hotfix/2026.03.1   # sync ngược BẮT BUỘC
+git switch develop && git merge --no-ff hotfix/2026.03.1   # MANDATORY back-merge
 ```
 
-## Ai được làm gì
+## Who may do what
 
-| Hành động | Agent | Người |
+| Action | Agent | Human |
 |---|---|---|
-| feature/* + PR vào develop | ✓ | ✓ |
-| merge vào develop | ✓ (nếu protection cho phép, CI xanh) | ✓ |
-| cắt release/* | ✗ | ✓ |
-| merge vào main, tag | ✗ | ✓ |
-| duyệt PROD | ✗ | ✓ |
+| feature/* + PR into develop | ✓ | ✓ |
+| merge into develop | ✓ (if protection allows, CI green) | ✓ |
+| cut release/* | ✗ | ✓ |
+| merge into main, tag | ✗ | ✓ |
+| approve PROD | ✗ | ✓ |
 | hotfix | ✗ | ✓ |

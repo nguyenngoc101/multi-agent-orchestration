@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-enforce-scope.py — Chặn cứng ở CI: PR của feature/<task> chỉ được đổi file
-nằm trong scope.allow (và không nằm trong scope.deny) của task đó trong registry.
+enforce-scope.py — hard gate in CI: a feature/<task> PR may only change files
+inside that task's scope.allow (and not in scope.deny) per the registry.
 
-Đây là lớp cưỡng chế "ranh giới file" mà AGENTS.md/WORKER_PROTOCOL chỉ khuyến nghị.
-Agent có thể lờ luật mềm; job này thì không lờ được.
+This is the enforcement layer for the "file boundary" that AGENTS.md/WORKER_PROTOCOL
+only recommend. An agent can ignore soft rules; this job cannot be ignored.
 
-Dùng:
+Usage:
   enforce-scope.py --registry task-registry.json --task T-101 --base <sha> --head <sha>
-Exit != 0 nếu có file ngoài scope.
+Exit != 0 if any file is out of scope.
 """
 import argparse, json, subprocess, sys, fnmatch
 
@@ -36,7 +36,7 @@ def main():
     reg = json.load(open(args.registry))
     task = next((t for t in reg["tasks"] if t["id"] == args.task), None)
     if task is None:
-        print(f"::error::Task {args.task} không có trong registry.")
+        print(f"::error::Task {args.task} not found in the registry.")
         sys.exit(1)
 
     allow = task["scope"]["allow"]
@@ -46,21 +46,21 @@ def main():
     violations = []
     for f in files:
         if deny and match_any(f, deny):
-            violations.append((f, "nằm trong scope.deny"))
+            violations.append((f, "in scope.deny"))
         elif not match_any(f, allow):
-            violations.append((f, "ngoài scope.allow"))
+            violations.append((f, "outside scope.allow"))
 
     print(f"Task {args.task} — allow={allow} deny={deny}")
-    print(f"File thay đổi: {len(files)}")
+    print(f"Files changed: {len(files)}")
     if violations:
-        print("\n✗ VI PHẠM SCOPE:")
+        print("\n✗ SCOPE VIOLATIONS:")
         for f, why in violations:
             print(f"   - {f}  ({why})")
-        print(f"\n::error::PR đổi {len(violations)} file ngoài scope của {args.task}. "
-              "Worker phải DỪNG và báo orchestrator/người để chia lại task.")
+        print(f"\n::error::PR changes {len(violations)} file(s) outside {args.task}'s scope. "
+              "The worker must STOP and tell the orchestrator/human to re-split the task.")
         sys.exit(1)
 
-    print("✓ Mọi file thay đổi đều trong scope.")
+    print("✓ All changed files are within scope.")
     sys.exit(0)
 
 if __name__ == "__main__":

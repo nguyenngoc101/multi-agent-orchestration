@@ -25,11 +25,11 @@ MIRRORED = (
 def main():
     drifted = [path for path in MIRRORED if (ROOT / path).read_bytes() != (SKILL / path).read_bytes()]
     if drifted:
-        print("Skill copy không đồng bộ:", file=sys.stderr)
+        print("Skill copy is out of sync:", file=sys.stderr)
         for path in drifted:
             print(f"  - {path}", file=sys.stderr)
         return 1
-    print("✓ Skill copy đồng bộ.")
+    print("✓ Skill copy in sync.")
     return 0
 
 

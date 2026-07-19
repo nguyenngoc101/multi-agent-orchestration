@@ -1,19 +1,19 @@
 ## Task
-- Task ID: <!-- T-xxx, khớp tên nhánh feature/T-xxx -->
+- Task ID: <!-- T-xxx, matching the branch name feature/T-xxx -->
 - Issue: <!-- link -->
 
-## Thay đổi
-<!-- Làm gì, vì sao. Ngắn gọn. -->
+## Changes
+<!-- What and why. Keep it short. -->
 
 ## Scope
-- [ ] Chỉ đụng file trong `scope.allow` của task (registry-guard sẽ kiểm)
-- [ ] Không đụng `main` / `develop` / `release/*` / `hotfix/*`
+- [ ] Only touched files within the task's `scope.allow` (registry-guard will check)
+- [ ] Did not touch `main` / `develop` / `release/*` / `hotfix/*`
 
-## Kiểm tra trước khi mở PR
-- [ ] Đã rebase lên `origin/develop`
-- [ ] `just lint` xanh
-- [ ] `just test` xanh
-- [ ] `just build` xanh
+## Pre-PR checks
+- [ ] Rebased onto `origin/develop`
+- [ ] `just lint` green
+- [ ] `just test` green
+- [ ] `just build` green
 
-## Cách test
-<!-- Reviewer chạy gì để xác nhận -->
+## How to test
+<!-- What the reviewer runs to confirm -->

@@ -1,33 +1,33 @@
-# Decision Log (ADR-lite) — bộ nhớ CHUNG cho mọi agent
+# Decision Log (ADR-lite) — SHARED memory for every agent
 
-Thư mục này giữ **quyết định xuyên suốt** (cross-cutting) mà *nhiều* agent phải
-tuân theo để không giẫm quy ước nhau: interface ở module dùng chung, quy ước đặt
-tên, chọn thư viện/pattern, ranh giới kiến trúc.
+This directory holds **cross-cutting decisions** that *multiple* agents must follow to
+avoid clashing on conventions: interfaces in shared modules, naming conventions, choice of
+library/pattern, architectural boundaries.
 
-## Vì sao cần
+## Why it's needed
 
-Registry giữ *task-context* (hẹp, cho một task). `docs/decisions/` giữ
-*project-context* (rộng, cho mọi task). Nhiều agent song song có thể ra quyết định
-**đúng cục bộ nhưng lệch toàn cục** — hai kiểu đặt tên, hai interface không khớp ở
-ranh giới chung. ADR biến những quyết định đó thành **artifact đọc lại được**, thay
-vì nằm trong đầu một agent hoặc trong lịch sử chat sẽ mất.
+The registry holds *task-context* (narrow, for one task). `docs/decisions/` holds
+*project-context* (broad, for every task). Many parallel agents can make decisions that
+are **locally correct but globally inconsistent** — two naming styles, two interfaces that
+don't line up at a shared boundary. ADRs turn those decisions into a **re-readable
+artifact**, instead of living in one agent's head or in chat history that gets lost.
 
-## Luật cho agent (BẮT BUỘC)
+## Rules for agents (MANDATORY)
 
-1. **Trước** khi ra quyết định ảnh hưởng nhiều module / ranh giới chung: ĐỌC thư mục
-   này. Quyết định đã có ở đây thì TUÂN theo, không tự chọn khác.
-2. Nếu cần một quyết định xuyên suốt MỚI (chưa có ADR): **DỪNG, đề xuất ADR** trong
-   PR/issue — đừng quyết âm thầm trong một feature branch. Quyết định chung phải qua
-   PR control-plane (nhánh `ops/*`) được CODEOWNER duyệt, rồi các feature mới build lên.
-3. Tham chiếu ADR trong `task.log` và mô tả PR (vd "theo ADR-0002").
+1. **Before** making a decision that affects multiple modules / a shared boundary: READ
+   this directory. If a decision already exists here, FOLLOW it — don't choose otherwise.
+2. If you need a NEW cross-cutting decision (no ADR yet): **STOP, propose an ADR** in the
+   PR/issue — don't decide silently in a feature branch. A shared decision must go through
+   a control-plane PR (an `ops/*` branch) approved by a CODEOWNER, then features build on it.
+3. Reference the ADR in `task.log` and the PR description (e.g. "per ADR-0002").
 
-## Cách viết một ADR
+## How to write an ADR
 
-- Copy `TEMPLATE.md` thành `NNNN-tieu-de-ngan.md` (số tăng dần, 4 chữ số).
-- Điền: Status, Context, Decision, Consequences. Ngắn gọn — một màn hình là đủ.
-- ADR là **bất biến sau khi Accepted**: muốn đổi thì viết ADR mới `Supersedes NNNN`,
-  và đánh dấu ADR cũ `Superseded by MMMM`. Không sửa lịch sử quyết định.
+- Copy `TEMPLATE.md` to `NNNN-short-title.md` (increasing number, 4 digits).
+- Fill in: Status, Context, Decision, Consequences. Keep it short — one screen is enough.
+- An ADR is **immutable once Accepted**: to change it, write a new ADR that `Supersedes NNNN`,
+  and mark the old one `Superseded by MMMM`. Don't rewrite decision history.
 
-## Danh mục
+## Index
 
-- [0001](0001-record-architecture-decisions.md) — Dùng ADR để ghi quyết định kiến trúc.
+- [0001](0001-record-architecture-decisions.md) — Use ADRs to record architecture decisions.

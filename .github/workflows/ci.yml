@@ -1,6 +1,6 @@
 name: ci
 
-# Gate cho mọi PR vào develop/main. Stack-agnostic: gọi just|make, không hardcode stack.
+# Gate for every PR into develop/main. Stack-agnostic: calls just|make, no hardcoded stack.
 on:
   pull_request:
     branches: [develop, main, "release/**"]
@@ -28,7 +28,7 @@ jobs:
           elif [ -f Makefile ] || [ -f makefile ]; then
             echo "cmd=make" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::Không thấy justfile/Makefile — định nghĩa lint/test/build ở đó."
+            echo "::error::No justfile/Makefile found — define lint/test/build there."
             exit 1
           fi
 

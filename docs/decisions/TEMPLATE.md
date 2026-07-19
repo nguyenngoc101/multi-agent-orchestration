@@ -1,19 +1,19 @@
-# NNNN — <Tiêu đề ngắn, ở thể mệnh lệnh>
+# NNNN — <Short title, imperative mood>
 
 - **Status:** Proposed | Accepted | Superseded by MMMM
 - **Date:** YYYY-MM-DD
-- **Deciders:** <ai duyệt — thường là CODEOWNER>
+- **Deciders:** <who approved — usually a CODEOWNER>
 
 ## Context
 
-Vấn đề/ràng buộc buộc phải ra quyết định này là gì? Nêu các lựa chọn đã cân nhắc.
-(Đủ để một agent khởi động lạnh hiểu vì sao, không cần hỏi lại.)
+What problem/constraint forces this decision? List the options considered.
+(Enough for a cold-starting agent to understand the why without asking again.)
 
 ## Decision
 
-Chọn cái gì. Nói RÕ ràng, không mơ hồ — đây là thứ mọi agent sẽ tuân theo.
+What is chosen. State it CLEARLY, unambiguously — this is what every agent will follow.
 
 ## Consequences
 
-Hệ quả tích cực và tiêu cực. Ai/đâu bị ảnh hưởng. Ranh giới/interface nào giờ là
-"đã chốt" và các task khác phải build lên trên (không tự định nghĩa lại).
+Positive and negative consequences. Who/what is affected. Which boundary/interface is now
+"settled" and must be built upon by other tasks (not redefined).

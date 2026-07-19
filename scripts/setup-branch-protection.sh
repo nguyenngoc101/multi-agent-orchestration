@@ -1,47 +1,48 @@
 #!/usr/bin/env bash
-# setup-branch-protection.sh — áp "lớp chặn phía server" bằng một lệnh (gh api).
-# Biến docs/branch-protection.md thành cấu hình thật, idempotent.
+# setup-branch-protection.sh — apply the "server-side gate" with one command (gh api).
+# Turns docs/branch-protection.md into real, idempotent configuration.
 #
-# MẶC ĐỊNH: dry-run (chỉ IN kế hoạch). Thêm --apply để thực sự gọi API.
-# Yêu cầu: gh đã đăng nhập, tài khoản có quyền admin trên repo.
+# DEFAULT: dry-run (only PRINTS the plan). Add --apply to actually call the API.
+# Requires: gh logged in, with an account that has admin on the repo.
 #
-# Dùng:
-#   ./scripts/setup-branch-protection.sh            # xem kế hoạch
-#   ./scripts/setup-branch-protection.sh --apply    # áp thật
+# Usage:
+#   ./scripts/setup-branch-protection.sh            # show the plan
+#   ./scripts/setup-branch-protection.sh --apply    # apply for real
 #
-# Cố tình KHÔNG hardcode tên check stack: required checks = job CI trung lập
-# (gate, validate-registry). Đổi ở biến CHECKS nếu tên job khác.
+# Deliberately does NOT hardcode stack check names: required checks = the neutral
+# CI jobs (gate, validate-registry). Change the CHECKS var if your job names differ.
 
 set -euo pipefail
 
 APPLY=false
 [[ "${1:-}" == "--apply" ]] && APPLY=true
 
-command -v gh >/dev/null 2>&1 || { echo "✗ Cần gh CLI (https://cli.github.com)." >&2; exit 1; }
-gh auth status >/dev/null 2>&1 || { echo "✗ gh chưa đăng nhập. Chạy: gh auth login" >&2; exit 1; }
+command -v gh >/dev/null 2>&1 || { echo "✗ Need the gh CLI (https://cli.github.com)." >&2; exit 1; }
+gh auth status >/dev/null 2>&1 || { echo "✗ gh not logged in. Run: gh auth login" >&2; exit 1; }
 
 REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
-CHECKS='"gate","validate-registry"'   # job phải xanh trước khi merge
+CHECKS='"gate","validate-registry"'   # jobs that must be green before merge
 
 echo "Repo: $REPO"
 echo "Required checks: $CHECKS"
-$APPLY && echo "Chế độ: ÁP THẬT (--apply)" || echo "Chế độ: DRY-RUN (thêm --apply để áp)"
+$APPLY && echo "Mode: APPLY (--apply)" || echo "Mode: DRY-RUN (add --apply to apply)"
 echo
 
-# enforce_admins=false: giữ đường cho owner override lúc bootstrap; đổi thành true
-# khi muốn khoá cả admin. approvals: main cần người duyệt, develop có thể 0.
+# enforce_admins=false: keep an override path for the owner during bootstrap; set to
+# true when you want to lock admins out too. approvals: main needs human review,
+# develop can be 0.
 run() {
   local method="$1" path="$2" body="$3" desc="$4"
   echo "→ $desc  ($method $path)"
   if $APPLY; then
     printf '%s' "$body" | gh api -X "$method" "$path" --input - >/dev/null \
-      && echo "  ✓ OK" || { echo "  ✗ THẤT BẠI (kiểm quyền admin / tên check)"; return 1; }
+      && echo "  ✓ OK" || { echo "  ✗ FAILED (check admin rights / check names)"; return 1; }
   else
     echo "  [dry-run] body: $(printf '%s' "$body" | tr -d '\n' | tr -s ' ')"
   fi
 }
 
-# ── main / develop: classic branch protection (nhánh cụ thể) ────────────────
+# ── main / develop: classic branch protection (concrete branches) ────────────
 protect_branch() {
   local branch="$1" approvals="$2"
   local reviews="null"
@@ -63,8 +64,8 @@ protect_branch main 1
 protect_branch develop 0
 
 # ── release/* , hotfix/* : ruleset (wildcard) ───────────────────────────────
-# Không thêm rule creation/deletion để người vẫn cắt/xoá release được; chỉ bắt
-# PR + checks + cấm force-push trên các nhánh này.
+# No creation/deletion rules so humans can still cut/delete releases; only require
+# PR + checks + block force-push on these branches.
 run POST "repos/$REPO/rulesets" "$(cat <<JSON
 {
   "name": "protect-release-hotfix",
@@ -88,8 +89,8 @@ JSON
 )" "ruleset release/* + hotfix/* (PR + checks + no force-push)"
 
 echo
-echo "Ghi chú (làm trên UI, không script được tin cậy theo team):"
-echo "  - Restrict who can push main/release/hotfix → chỉ team người (loại account agent)."
-echo "  - Bật Merge Queue cho develop (Settings → Rules)."
-echo "  - Thay @your-team trong .github/CODEOWNERS bằng team thật."
-$APPLY || { echo; echo "Đây là DRY-RUN. Chạy lại với --apply để áp."; }
+echo "Notes (do these in the UI — not reliably scriptable per team):"
+echo "  - Restrict who can push main/release/hotfix → the human team only (exclude agent accounts)."
+echo "  - Enable Merge Queue for develop (Settings → Rules)."
+echo "  - Replace @your-team in .github/CODEOWNERS with a real team."
+$APPLY || { echo; echo "This was a DRY-RUN. Re-run with --apply to apply."; }

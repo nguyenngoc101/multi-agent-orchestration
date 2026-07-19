@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# pre-push — chặn agent push vào nhánh do người kiểm soát.
-# Kích hoạt: git config core.hooksPath .githooks
-# Lớp phòng thủ CỤC BỘ. Branch protection trên server mới là lớp không-thể-lách.
+# pre-push — block an agent from pushing to a human-controlled branch.
+# Enable with: git config core.hooksPath .githooks
+# This is the LOCAL defense layer. Server-side branch protection is the un-bypassable one.
 
 set -euo pipefail
 
@@ -9,29 +9,30 @@ PROTECTED_REGEX='^(main|develop|release/.*|hotfix/.*)$'
 
 # stdin: <local ref> <local sha> <remote ref> <remote sha>
 while read -r local_ref local_sha remote_ref remote_sha; do
-  # remote_ref dạng refs/heads/<branch>
+  # remote_ref looks like refs/heads/<branch>
   branch="${remote_ref#refs/heads/}"
 
   if [[ "$branch" =~ $PROTECTED_REGEX ]]; then
-    echo "✗ pre-push: cấm push thẳng vào '$branch'." >&2
-    echo "  Nhánh này do người kiểm soát. Agent chỉ push feature/* và mở PR vào develop." >&2
-    echo "  Nếu bạn là người và cố ý: tạm bỏ hook bằng 'git push --no-verify'." >&2
+    echo "✗ pre-push: pushing straight to '$branch' is forbidden." >&2
+    echo "  This branch is human-controlled. Agents only push feature/* and open PRs into develop." >&2
+    echo "  If you are a human doing this intentionally: bypass the hook with 'git push --no-verify'." >&2
     exit 1
   fi
 
-  # Xoá branch: local_sha toàn 0. Đây KHÔNG phải force-push (không viết lại lịch
-  # sử). Nhánh được-bảo-vệ đã bị chặn ở check trên rồi; nhánh thường thì cho xoá.
-  # Nếu không bỏ qua, guard bên dưới chạy 'merge-base --is-ancestor <sha> 0000…'
-  # luôn fail → chặn nhầm mọi lần xoá branch hợp lệ.
+  # Branch deletion: local_sha is all-zeros. This is NOT a force-push (no history
+  # rewrite). Protected branches were already blocked by the check above; other
+  # branches may be deleted. Without this skip, the guard below would run
+  # 'merge-base --is-ancestor <sha> 0000…' which always fails → wrongly blocking
+  # every legitimate branch deletion.
   if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then
     continue
   fi
 
-  # Chặn force-push (agent không được viết lại lịch sử nhánh chung)
+  # Block force-push (agents must not rewrite shared branch history)
   if [[ "$remote_sha" != "0000000000000000000000000000000000000000" ]]; then
     if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
-      echo "✗ pre-push: phát hiện force-push (non-fast-forward) vào '$branch'." >&2
-      echo "  Agent không được viết lại lịch sử đã push." >&2
+      echo "✗ pre-push: force-push (non-fast-forward) detected on '$branch'." >&2
+      echo "  Agents must not rewrite already-pushed history." >&2
       exit 1
     fi
   fi

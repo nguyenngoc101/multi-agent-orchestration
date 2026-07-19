@@ -1,4 +1,4 @@
-# Vùng nhạy cảm bắt buộc người review, agent không tự merge được.
+# Sensitive areas that require human review; agents cannot self-merge these.
 # Repository owner reviews sensitive control-plane and shared areas.
 /src/shared/         @nguyenngoc101
 /db/migrations/      @nguyenngoc101

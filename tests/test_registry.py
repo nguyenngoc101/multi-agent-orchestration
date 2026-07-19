@@ -25,7 +25,7 @@ class RegistryCheckerTests(unittest.TestCase):
     def test_valid_registry_passes(self):
         result = self.run_checker({"agents": [], "tasks": []})
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertIn("KẾT QUẢ: OK", result.stdout)
+        self.assertIn("RESULT: OK", result.stdout)
 
     def test_missing_task_id_is_clean_validation_error(self):
         result = self.run_checker({
@@ -33,7 +33,7 @@ class RegistryCheckerTests(unittest.TestCase):
             "tasks": [{"title": "broken", "scope": {"allow": ["src/**"]}, "state": "backlog"}],
         })
         self.assertEqual(1, result.returncode)
-        self.assertIn("thiếu field 'id'", result.stdout)
+        self.assertIn("missing field 'id'", result.stdout)
         self.assertNotIn("Traceback", result.stderr)
 
     def test_wrong_scope_type_is_clean_validation_error(self):
@@ -42,7 +42,7 @@ class RegistryCheckerTests(unittest.TestCase):
             "tasks": [{"id": "T-1", "title": "broken", "scope": [], "state": "backlog"}],
         })
         self.assertEqual(1, result.returncode)
-        self.assertIn("scope phải là object", result.stdout)
+        self.assertIn("scope must be an object", result.stdout)
         self.assertNotIn("Traceback", result.stderr)
 
     def test_cycle_fails(self):
@@ -56,7 +56,7 @@ class RegistryCheckerTests(unittest.TestCase):
             ],
         })
         self.assertEqual(1, result.returncode)
-        self.assertIn("Dependency VÒNG", result.stdout)
+        self.assertIn("Dependency CYCLE", result.stdout)
 
     def test_valid_log_passes(self):
         result = self.run_checker({
@@ -68,7 +68,7 @@ class RegistryCheckerTests(unittest.TestCase):
             }],
         })
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertIn("KẾT QUẢ: OK", result.stdout)
+        self.assertIn("RESULT: OK", result.stdout)
 
     def test_log_entry_missing_note_is_error(self):
         result = self.run_checker({
@@ -80,7 +80,7 @@ class RegistryCheckerTests(unittest.TestCase):
             }],
         })
         self.assertEqual(1, result.returncode)
-        self.assertIn("log entry thiếu 'note'", result.stdout)
+        self.assertIn("log entry missing 'note'", result.stdout)
         self.assertNotIn("Traceback", result.stderr)
 
     def test_log_not_a_list_is_error(self):
@@ -92,7 +92,7 @@ class RegistryCheckerTests(unittest.TestCase):
             }],
         })
         self.assertEqual(1, result.returncode)
-        self.assertIn("log phải là mảng", result.stdout)
+        self.assertIn("log must be an array", result.stdout)
 
 
 if __name__ == "__main__":
