@@ -58,6 +58,42 @@ class RegistryCheckerTests(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("Dependency VÒNG", result.stdout)
 
+    def test_valid_log_passes(self):
+        result = self.run_checker({
+            "agents": [],
+            "tasks": [{
+                "id": "T-1", "title": "logged", "scope": {"allow": ["src/**"]},
+                "state": "backlog",
+                "log": [{"ts": "2026-07-19T00:00:00Z", "by": "orchestrator", "note": "created"}],
+            }],
+        })
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("KẾT QUẢ: OK", result.stdout)
+
+    def test_log_entry_missing_note_is_error(self):
+        result = self.run_checker({
+            "agents": [],
+            "tasks": [{
+                "id": "T-1", "title": "bad-log", "scope": {"allow": ["src/**"]},
+                "state": "backlog",
+                "log": [{"by": "orchestrator"}],
+            }],
+        })
+        self.assertEqual(1, result.returncode)
+        self.assertIn("log entry thiếu 'note'", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_log_not_a_list_is_error(self):
+        result = self.run_checker({
+            "agents": [],
+            "tasks": [{
+                "id": "T-1", "title": "bad-log", "scope": {"allow": ["src/**"]},
+                "state": "backlog", "log": "nope",
+            }],
+        })
+        self.assertEqual(1, result.returncode)
+        self.assertIn("log phải là mảng", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

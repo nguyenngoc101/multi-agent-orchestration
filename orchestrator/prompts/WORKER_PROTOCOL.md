@@ -31,6 +31,11 @@ worker trả về theo format OUTPUT. Không dựa vào đặc thù của bất 
 3. Trước khi báo xong: rebase lên `base`, chạy `commands.lint/test/build`, phải xanh.
 4. Không `git stash`, không force-push, không đụng main/develop/release/hotfix.
 5. Commit nhỏ, message rõ, tham chiếu `task_id`.
+6. Context nằm ở ARTIFACT, không ở trí nhớ: nếu bị giao lại, đọc `task.log`, branch
+   của bạn, và comment PR để tái dựng — đừng giả định nhớ phiên trước.
+7. Quyết định xuyên suốt (interface chung, quy ước) → ĐỌC `docs/decisions/` trước
+   và tuân ADR đang Accepted. Cần một quyết định chung MỚI → DỪNG, đề xuất ADR
+   (status=blocked, nêu ở `notes`); KHÔNG tự chốt trong feature branch.
 
 ## OUTPUT — worker trả về orchestrator
 

@@ -1,4 +1,4 @@
-.PHONY: bootstrap lint test build check-registry waves
+.PHONY: bootstrap lint test build check-registry waves orchestrate
 
 bootstrap:
 	@echo "Không có dependency ngoài Python 3 standard library."
@@ -13,3 +13,6 @@ test:
 
 build check-registry waves:
 	python3 scripts/check-registry.py task-registry.json
+
+orchestrate:
+	python3 scripts/orchestrate.py task-registry.json

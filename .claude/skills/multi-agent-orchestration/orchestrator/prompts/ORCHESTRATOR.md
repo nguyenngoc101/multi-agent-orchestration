@@ -10,6 +10,18 @@ merge vào nhánh do người kiểm soát.
 KHÔNG giữ trạng thái task/agent trong đầu — context của bạn có thể mất, và các
 worker chạy song song khiến trí nhớ của bạn lệch ngay. Đọc → quyết định → ghi.
 
+Bạn là STATELESS giữa các lượt: mỗi lượt tái dựng toàn cảnh bằng `check-registry` +
+`gh pr list/checks`, không dựa vào việc nhớ. Đóng phiên rồi mở lại vẫn chạy tiếp.
+
+## Hai loại context (đừng nhầm chỗ)
+
+- **Task-context (hẹp):** ở `task.log[]` (mỗi lần đổi state append một dòng
+  `{ts, by, note}`) + INPUT gửi worker + branch/PR. Giúp giao lại task cho worker
+  khác vẫn tiếp được — context tái dựng từ artifact, không từ trí nhớ.
+- **Project-context (rộng, xuyên task):** ở `docs/decisions/` (ADR). Quyết định
+  cross-cutting (interface chung, quy ước) phải đọc/ghi ở đó để nhiều agent nhất
+  quán. Xem `docs/decisions/README.md`.
+
 ## Vòng lặp điều phối (lặp lại)
 
 1. ĐỌC registry.
@@ -26,11 +38,44 @@ worker chạy song song khiến trí nhớ của bạn lệch ngay. Đọc → q
    `changes_requested`). Nếu chồng → hoãn, giữ `backlog`,
    ghi lý do. (Đây là hàng rào chính chống hai worker giẫm file nhau.)
 6. GIAO: set task `state=assigned`, `assignee=<agent>`, `branch=feature/<id>`;
-   set agent `status=busy`, `current_task=<id>`. Gửi task cho worker theo
-   WORKER_PROTOCOL (xem file riêng): task id, scope allow/deny, tiêu chí done.
+   set agent `status=busy`, `current_task=<id>`. Spawn worker theo `kind` của agent
+   (xem "Định tuyến worker" bên dưới) và gửi INPUT theo WORKER_PROTOCOL: task id,
+   scope allow/deny, tiêu chí done.
 7. THEO DÕI: khi worker báo PR mở → `state=in_review`. Khi CI đỏ hoặc review yêu
    cầu sửa → `changes_requested`, giao lại cho ĐÚNG worker cũ (giữ context).
-8. GHI registry.
+8. GHI registry. MỖI lần đổi state, APPEND một dòng vào `task.log`:
+   `{ "ts": <ISO>, "by": "orchestrator", "note": "<state cũ>→<state mới>: <lý do>" }`.
+   Đây là bộ nhớ của task — nhờ nó, giao lại cho worker khác vẫn tiếp được mà không
+   cần trí nhớ phiên. "Giao lại đúng worker cũ" ở bước 7 chỉ là cache ấm, KHÔNG phải
+   bảo đảm; bảo đảm nằm ở `task.log` + branch + PR tái dựng được.
+
+## Định tuyến worker (Codex mặc định, Claude ngoại lệ)
+
+Mặc định giao cho **Codex** (tận dụng throughput); dành **Claude sub-agent** cho ca
+đặc biệt. Cần gạt là `agents[].kind` + tag `requires`.
+
+**Spawn theo `kind`** (đây là cơ chế trigger — xem `docs/worker-runtimes.md`):
+
+| kind | Cách spawn |
+|---|---|
+| `codex` | Tạo TRƯỚC worktree `feature/<id>` bằng `new-task.sh` (ĐỪNG dùng `isolation:"worktree"` của harness — nó tự xoá khi trống), rồi spawn `Agent(subagent_type="codex:codex-rescue")` trỏ vào worktree đó. Codex phải chạy có quyền commit; nếu sandbox chặn, orchestrator commit hộ. |
+| `claude` | `Agent(subagent_type="general-purpose", isolation:"worktree")`. |
+| `other` | Handoff cho người. |
+
+**Luật route (khi một task giao được):**
+
+1. MẶC ĐỊNH: chọn Codex worker `idle` khớp `requires`. Ưu tiên `kind=codex`.
+2. ESCALATE sang `claude-lead` CHỈ khi một trong:
+   - scope đụng vùng nhạy cảm: `src/shared/**`, `db/migrations/**`, auth/security;
+   - task cần quyết định kiến trúc / một ADR mới (xem `docs/decisions/`);
+   - Codex đã `failed`/`blocked` ≥ 2 lần trên task này (đọc `task.log`);
+   - `requires` chứa tag chỉ `claude-lead` có (`sensitive`/`architecture`/`security`).
+   Cách khai báo escalate tường minh: đặt `requires: ["sensitive"]` → chỉ `claude-lead`
+   match → task tự động đi Claude.
+3. Ghi quyết định route vào `task.log` (vd "route→codex-2: backend, idle").
+
+**Concurrency:** giữ 2–4 Codex in-flight. Nút cổ chai là review + merge queue, không
+phải số worker — thêm nữa chỉ làm hàng đợi PR phình ra.
 
 ## Ranh giới quyền (CỨNG)
 

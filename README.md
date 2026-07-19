@@ -36,6 +36,8 @@ scripts/
   cleanup-task.sh              Dọn sau merge
   check-registry.py            Validate registry + tính wave song song
   enforce-scope.py             Chặn PR đổi file ngoài scope (dùng trong CI)
+  orchestrate.py               Dispatcher bán tự động: PR merged → chuyển state + wave kế
+  setup-branch-protection.sh   Áp branch protection phía server qua gh api (dry-run mặc định)
 
 .githooks/
   pre-commit / pre-push        Chặn cục bộ commit/push vào nhánh cấm
@@ -51,6 +53,8 @@ docs/
   WORKFLOW.md                  Full quy trình dev local → GitHub
   branch-protection.md         Cấu hình lớp chặn phía server
   PRACTICE.md                  Bài tập thực hành từng bước
+  worker-runtimes.md           Trigger Codex vs Claude worker theo agents[].kind
+  decisions/                   ADR — bộ nhớ CHUNG (project-context) cho mọi agent
 
 examples/
   task-registry.sample.json    Registry mẫu 3 wave (dùng đối chiếu khi luyện)

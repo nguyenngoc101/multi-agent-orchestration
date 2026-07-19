@@ -8,8 +8,9 @@ Kiểm tra:
   3. Dependency vòng (chu trình) → lỗi cứng, dừng.
   4. depends_on trỏ tới task không tồn tại → lỗi.
   5. Nhất quán agent ↔ task (assignee/current_task trỏ đúng, status khớp).
-  6. Scope overlap giữa các task đang active → cảnh báo.
-  7. Tính "wave": nhóm task chạy song song được ở thời điểm hiện tại.
+  6. Nhật ký task (log[]) đúng cấu trúc — mỗi entry là object có 'note'.
+  7. Scope overlap giữa các task đang active → cảnh báo.
+  8. Tính "wave": nhóm task chạy song song được ở thời điểm hiện tại.
 
 Không phụ thuộc thư viện ngoài — chạy bằng Python 3 chuẩn.
 Dùng: python3 scripts/check-registry.py [đường-dẫn-registry.json]
@@ -73,6 +74,19 @@ def validate_structure(reg):
             value = task.get(key, [])
             if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
                 errors.append(f"Task {task.get('id')} {key} phải là mảng string.")
+        log = task.get("log", [])
+        if not isinstance(log, list):
+            errors.append(f"Task {task.get('id')} log phải là mảng.")
+        else:
+            for entry in log:
+                if not isinstance(entry, dict):
+                    errors.append(f"Task {task.get('id')} mỗi log entry phải là object.")
+                elif not isinstance(entry.get("note"), str) or not entry.get("note"):
+                    errors.append(f"Task {task.get('id')} log entry thiếu 'note' (string).")
+                else:
+                    for key in ("ts", "by"):
+                        if key in entry and not isinstance(entry[key], str):
+                            errors.append(f"Task {task.get('id')} log.{key} phải là string.")
 
     for index, agent in enumerate(agents):
         if not isinstance(agent, dict):

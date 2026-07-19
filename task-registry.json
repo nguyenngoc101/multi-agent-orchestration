@@ -1,8 +1,9 @@
 {
   "agents": [
-    { "id": "worker-1", "kind": "claude", "capabilities": ["backend", "sql", "refactor"], "max_concurrent": 1, "status": "idle",  "current_task": null },
-    { "id": "worker-2", "kind": "codex",  "capabilities": ["frontend", "test"],           "max_concurrent": 1, "status": "busy",  "current_task": "T-102" },
-    { "id": "worker-3", "kind": "claude", "capabilities": ["backend", "infra"],            "max_concurrent": 1, "status": "idle",  "current_task": null }
+    { "id": "codex-1",     "kind": "codex",  "capabilities": ["backend", "frontend", "test", "refactor"],        "max_concurrent": 1, "status": "busy", "current_task": "T-102" },
+    { "id": "codex-2",     "kind": "codex",  "capabilities": ["backend", "sql", "test"],                          "max_concurrent": 1, "status": "idle", "current_task": null },
+    { "id": "codex-3",     "kind": "codex",  "capabilities": ["frontend", "test"],                                "max_concurrent": 1, "status": "idle", "current_task": null },
+    { "id": "claude-lead", "kind": "claude", "capabilities": ["sensitive", "architecture", "security", "review", "backend"], "max_concurrent": 1, "status": "idle", "current_task": null }
   ],
   "tasks": [
     {
@@ -10,20 +11,38 @@
       "issue": "https://github.com/org/repo/issues/101",
       "scope": { "allow": ["src/payment/**", "test/payment/**"], "deny": ["src/shared/**"] },
       "requires": ["backend"], "depends_on": [], "priority": 1,
-      "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null
+      "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null,
+      "log": [
+        { "by": "orchestrator", "note": "route mặc định→codex (requires=backend, không nhạy cảm); chờ tới lượt giao" }
+      ]
     },
     {
       "id": "T-102", "title": "Màn hình lịch sử giao dịch",
       "scope": { "allow": ["src/web/history/**"], "deny": [] },
       "requires": ["frontend"], "depends_on": [], "priority": 2,
-      "state": "in_progress", "assignee": "worker-2", "branch": "feature/T-102", "pr": null, "blocked_reason": null
+      "state": "in_progress", "assignee": "codex-1", "branch": "feature/T-102", "pr": null, "blocked_reason": null,
+      "log": [
+        { "ts": "2026-07-19T09:00:00Z", "by": "orchestrator", "note": "backlog→assigned: route→codex-1 (frontend, idle)" },
+        { "ts": "2026-07-19T09:05:00Z", "by": "codex-1",      "note": "assigned→in_progress; theo ADR-0001 tái dùng component bảng ở src/web/shared (chỉ đọc)" }
+      ]
     },
     {
       "id": "T-103", "title": "Migration bảng refund",
       "scope": { "allow": ["db/migrations/**"], "deny": [] },
       "requires": ["sql"], "depends_on": ["T-101"], "priority": 1,
-      "state": "backlog", "assignee": null, "branch": null, "pr": null,
-      "blocked_reason": null
+      "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null,
+      "log": [
+        { "by": "orchestrator", "note": "giữ backlog: chờ T-101 merged (schema phụ thuộc); sẽ route→codex-2 (có sql)" }
+      ]
+    },
+    {
+      "id": "T-104", "title": "Refactor tiện ích tiền tệ dùng chung",
+      "scope": { "allow": ["src/shared/money/**"], "deny": [] },
+      "requires": ["sensitive"], "depends_on": [], "priority": 2,
+      "state": "backlog", "assignee": null, "branch": null, "pr": null, "blocked_reason": null,
+      "log": [
+        { "by": "orchestrator", "note": "requires=sensitive → chỉ claude-lead match → escalate sang Claude (đụng module dùng chung)" }
+      ]
     }
   ]
 }
